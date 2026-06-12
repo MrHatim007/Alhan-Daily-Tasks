@@ -27,6 +27,8 @@ function Dashboard() {
     return localStorage.getItem('alhan_active_tab') || 'dashboard';
   });
   const { currentUser, logoutUser, tasks, isCloudActive, roles } = useApp();
+  const [showInactivityModal, setShowInactivityModal] = useState(false);
+  const [inactivityCountdown, setInactivityCountdown] = useState(60);
 
   const currentUserRole = roles.find(r => r.id === currentUser.role);
   const currentUserPermission = currentUserRole ? currentUserRole.permission : currentUser.role;
@@ -40,17 +42,18 @@ function Dashboard() {
     logoutUser();
   };
 
-  // Auto-logout after 1 minute of inactivity
+  // Inactivity tracking (Stage 1: Modal is closed)
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || showInactivityModal) return;
 
     let timeoutId;
 
     const resetTimer = () => {
       if (timeoutId) clearTimeout(timeoutId);
-      // 1 minute = 60,000 milliseconds
+      // Inactive for 60 seconds (1 minute) -> open warning modal
       timeoutId = setTimeout(() => {
-        handleLogout();
+        setShowInactivityModal(true);
+        setInactivityCountdown(60); // 60 seconds warning countdown
       }, 60000);
     };
 
@@ -70,7 +73,28 @@ function Dashboard() {
         window.removeEventListener(event, resetTimer);
       });
     };
-  }, [currentUser]);
+  }, [currentUser, showInactivityModal]);
+
+  // Countdown timer (Stage 2: Modal is open)
+  useEffect(() => {
+    if (!showInactivityModal || !currentUser) return;
+
+    const intervalId = setInterval(() => {
+      setInactivityCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(intervalId);
+          handleLogout();
+          setShowInactivityModal(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [showInactivityModal, currentUser]);
 
   const getRoleLabel = (role) => {
     switch (role) {
@@ -302,6 +326,87 @@ function Dashboard() {
           {renderView()}
         </main>
       </div>
+
+      {/* Inactivity Warning Modal */}
+      {showInactivityModal && (
+        <div className="modal-overlay" style={{ zIndex: 9999 }}>
+          <div className="modal-content glass-panel animate-slide-in" style={{ 
+            borderColor: 'var(--color-critical)', 
+            maxWidth: '400px',
+            textAlign: 'center',
+            padding: '32px 24px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '20px'
+          }}>
+            {/* Warning Icon with pulse */}
+            <div className="pulse-critical-badge" style={{
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              background: 'var(--color-critical-bg)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-critical)',
+              fontSize: '28px'
+            }}>
+              <AlertTriangle size={32} />
+            </div>
+
+            <div>
+              <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#fff', marginBottom: '8px' }}>تنبيه تسجيل الخروج التلقائي</h3>
+              <p style={{ fontSize: '13px', color: 'rgba(245, 240, 235, 0.7)', lineHeight: '1.6' }}>
+                لقد كنت غير نشط لفترة من الوقت. للحفاظ على أمان بياناتك، سيتم تسجيل خروجك تلقائياً خلال:
+              </p>
+            </div>
+
+            {/* Countdown Display */}
+            <div style={{
+              fontSize: '36px',
+              fontWeight: 800,
+              color: 'var(--color-critical)',
+              background: 'rgba(244, 63, 94, 0.05)',
+              border: '2px solid rgba(244, 63, 94, 0.2)',
+              width: '90px',
+              height: '90px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontFamily: 'var(--font-family-en)',
+              boxShadow: '0 0 15px rgba(244, 63, 94, 0.1)'
+            }}>
+              {inactivityCountdown}
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', gap: '12px', width: '100%', marginTop: '10px' }}>
+              <button 
+                className="btn btn-primary" 
+                onClick={() => setShowInactivityModal(false)}
+                style={{ flex: 1, padding: '12px' }}
+              >
+                متابعة العمل
+              </button>
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleLogout}
+                style={{ 
+                  flex: 1, 
+                  padding: '12px',
+                  color: 'var(--color-critical)',
+                  borderColor: 'rgba(244, 63, 94, 0.3)',
+                  background: 'rgba(244, 63, 94, 0.05)'
+                }}
+              >
+                تسجيل الخروج
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
