@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Coffee, Mail, Lock, AlertCircle } from 'lucide-react';
 
 export default function Login() {
-  const { users, loginUser } = useApp();
+  const { users, loginUser, systemLogo } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -73,9 +73,27 @@ export default function Login() {
           marginBottom: '32px',
           textAlign: 'center'
         }}>
-          <div className="logo-icon" style={{ width: '60px', height: '60px', fontSize: '26px' }}>
-            <Coffee size={32} />
-          </div>
+          {systemLogo ? (
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '20px',
+              border: '2px solid rgba(223, 183, 108, 0.25)',
+              background: 'rgba(7, 4, 3, 0.4)',
+              boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '12px',
+              marginBottom: '4px'
+            }}>
+              <img src={systemLogo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            </div>
+          ) : (
+            <div className="logo-icon" style={{ width: '60px', height: '60px', fontSize: '26px' }}>
+              <Coffee size={32} />
+            </div>
+          )}
           <div>
             <h1 style={{
               fontSize: '24px',

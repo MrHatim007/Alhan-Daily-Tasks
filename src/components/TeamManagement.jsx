@@ -126,7 +126,7 @@ export default function TeamManagement() {
             </button>
           </div>
 
-          <form onSubmit={handleAddMember} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }} className="dashboard-grid">
+          <form onSubmit={handleAddMember} className="form-grid-2col">
             <div className="form-group">
               <label>الاسم الكامل:</label>
               <input 

@@ -174,6 +174,11 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : INITIAL_ROLES;
   });
 
+  const [systemLogo, setSystemLogo] = useState(() => {
+    const saved = localStorage.getItem('alhan_system_logo');
+    return saved || '';
+  });
+
   const [loading, setLoading] = useState(isCloudActive);
 
   // Real-time Firestore sync & Seeding
@@ -186,9 +191,10 @@ export const AppProvider = ({ children }) => {
     let categoriesLoaded = false;
     let prioritiesLoaded = false;
     let rolesLoaded = false;
+    let configLoaded = false;
 
     const checkLoadingComplete = () => {
-      if (usersLoaded && tasksLoaded && activitiesLoaded && categoriesLoaded && prioritiesLoaded && rolesLoaded) {
+      if (usersLoaded && tasksLoaded && activitiesLoaded && categoriesLoaded && prioritiesLoaded && rolesLoaded && configLoaded) {
         setLoading(false);
       }
     };
@@ -285,6 +291,21 @@ export const AppProvider = ({ children }) => {
       checkLoadingComplete();
     });
 
+    // 7. Sync General System Settings (Logo)
+    const unsubConfig = onSnapshot(doc(db, "config", "general"), (docSnap) => {
+      if (docSnap.exists()) {
+        setSystemLogo(docSnap.data().logo || '');
+      } else {
+        setSystemLogo('');
+      }
+      configLoaded = true;
+      checkLoadingComplete();
+    }, (error) => {
+      console.warn("Config doc error, fallback to local:", error);
+      configLoaded = true;
+      checkLoadingComplete();
+    });
+
     return () => {
       unsubUsers();
       unsubTasks();
@@ -292,6 +313,7 @@ export const AppProvider = ({ children }) => {
       unsubCategories();
       unsubPriorities();
       unsubRoles();
+      unsubConfig();
     };
   }, [isCloudActive]);
 
@@ -648,6 +670,16 @@ export const AppProvider = ({ children }) => {
     return updatedUser;
   };
 
+  // Update System Logo
+  const updateSystemLogo = async (newLogo) => {
+    setSystemLogo(newLogo);
+    localStorage.setItem('alhan_system_logo', newLogo);
+    if (isCloudActive) {
+      await setDoc(doc(db, "config", "general"), { logo: newLogo });
+    }
+    logActivity('update_logo', 'قام بتحديث شعار الكافيه مخصص للنظام.');
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -660,6 +692,8 @@ export const AppProvider = ({ children }) => {
         categories,
         priorities,
         roles,
+        systemLogo,
+        updateSystemLogo,
         addCategory,
         deleteCategory,
         addPriority,

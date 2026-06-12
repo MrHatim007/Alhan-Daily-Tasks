@@ -26,9 +26,10 @@ function Dashboard() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('alhan_active_tab') || 'dashboard';
   });
-  const { currentUser, logoutUser, tasks, isCloudActive, roles } = useApp();
+  const { currentUser, logoutUser, tasks, isCloudActive, roles, systemLogo } = useApp();
   const [showInactivityModal, setShowInactivityModal] = useState(false);
   const [inactivityCountdown, setInactivityCountdown] = useState(60);
+  const [showMobileMore, setShowMobileMore] = useState(false);
 
   const currentUserRole = roles.find(r => r.id === currentUser.role);
   const currentUserPermission = currentUserRole ? currentUserRole.permission : currentUser.role;
@@ -186,13 +187,64 @@ function Dashboard() {
 
   return (
     <div className="app-layout">
-      {/* 1. Sidebar Panel */}
-      <aside className="glass-panel sidebar">
+      {/* Mobile Top Bar (Mobile Only) */}
+      <header className="mobile-top-bar mobile-only">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '8px',
+            background: 'var(--gold-dim)',
+            border: '1px solid rgba(223,183,108,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '4px'
+          }}>
+            {systemLogo ? (
+              <img src={systemLogo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              <span style={{ fontSize: '16px' }}>☕</span>
+            )}
+          </div>
+          <span style={{ fontWeight: 800, fontSize: '15px', color: '#fff' }}>كافيه ألحان</span>
+        </div>
+
+        {/* User profile with quick logout on mobile */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', color: 'rgba(245, 240, 235, 0.5)' }}>{currentUser.name.split(' ')[0]}</span>
+          <button 
+            onClick={handleLogout}
+            style={{
+              background: 'rgba(244, 63, 94, 0.05)',
+              border: '1px solid rgba(244, 63, 94, 0.15)',
+              color: 'var(--color-critical)',
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer'
+            }}
+            title="تسجيل الخروج"
+          >
+            <LogOut size={14} />
+          </button>
+        </div>
+      </header>
+
+      {/* 1. Sidebar Panel (Desktop Only) */}
+      <aside className="glass-panel sidebar desktop-only">
         <div>
           {/* Logo */}
           <div className="sidebar-logo">
             <div className="sidebar-logo-icon">
-              <Coffee size={24} />
+              {systemLogo ? (
+                <img src={systemLogo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', borderRadius: '4px' }} />
+              ) : (
+                <Coffee size={24} />
+              )}
             </div>
             <div className="sidebar-logo-title">
               <h1>كافيه ألحان</h1>
@@ -301,8 +353,8 @@ function Dashboard() {
       {/* 2. Main Content Area */}
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
         
-        {/* Simple Top Bar */}
-        <header className="glass-panel" style={{ 
+        {/* Simple Top Bar (Desktop Only) */}
+        <header className="glass-panel desktop-only" style={{ 
           margin: '24px 32px 0 32px', 
           padding: '12px 24px', 
           display: 'flex', 
@@ -326,6 +378,123 @@ function Dashboard() {
           {renderView()}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation Bar (Mobile Only) */}
+      <nav className="mobile-bottom-nav mobile-only">
+        <button 
+          className={`mobile-nav-link ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('dashboard');
+            setShowMobileMore(false);
+          }}
+        >
+          <LayoutDashboard size={20} />
+          <span>الرئيسية</span>
+        </button>
+
+        <button 
+          className={`mobile-nav-link ${activeTab === 'tasks' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('tasks');
+            setShowMobileMore(false);
+          }}
+        >
+          <CheckSquare size={20} />
+          <span>المهام</span>
+        </button>
+
+        <button 
+          className={`mobile-nav-link ${activeTab === 'team' ? 'active' : ''}`}
+          onClick={() => {
+            setActiveTab('team');
+            setShowMobileMore(false);
+          }}
+        >
+          <Users size={20} />
+          <span>الفريق</span>
+        </button>
+
+        <button 
+          className={`mobile-nav-link ${showMobileMore ? 'active' : ''}`}
+          onClick={() => setShowMobileMore(!showMobileMore)}
+        >
+          <Sliders size={20} />
+          <span>المزيد</span>
+        </button>
+      </nav>
+
+      {/* Mobile Bottom Sheet (More Menu) */}
+      {showMobileMore && (
+        <div className="bottom-sheet-overlay" onClick={() => setShowMobileMore(false)}>
+          <div className="bottom-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="bottom-sheet-handle"></div>
+            <div className="bottom-sheet-title">قائمة الخيارات الإضافية</div>
+
+            {(currentUserPermission === 'owner' || currentUserPermission === 'manager') && (
+              <div 
+                className={`bottom-sheet-menu-item ${activeTab === 'assign' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('assign');
+                  setShowMobileMore(false);
+                }}
+              >
+                <PlusCircle size={18} />
+                <span>إسناد مهمة جديدة</span>
+              </div>
+            )}
+
+            <div 
+              className={`bottom-sheet-menu-item ${activeTab === 'logs' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveTab('logs');
+                setShowMobileMore(false);
+              }}
+            >
+              <History size={18} />
+              <span>سجل النشاطات العملياتية</span>
+            </div>
+
+            {currentUserPermission === 'owner' && (
+              <div 
+                className={`bottom-sheet-menu-item ${activeTab === 'archive' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('archive');
+                  setShowMobileMore(false);
+                }}
+              >
+                <Archive size={18} />
+                <span>أرشيف المهام المنجزة</span>
+              </div>
+            )}
+
+            {(currentUserPermission === 'owner' || currentUserPermission === 'manager') && (
+              <div 
+                className={`bottom-sheet-menu-item ${activeTab === 'settings' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('settings');
+                  setShowMobileMore(false);
+                }}
+              >
+                <Sliders size={18} />
+                <span>إعدادات النظام وتخصيصه</span>
+              </div>
+            )}
+
+            <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)', margin: '8px 0' }} />
+
+            <div 
+              className="bottom-sheet-menu-item danger"
+              onClick={() => {
+                setShowMobileMore(false);
+                handleLogout();
+              }}
+            >
+              <LogOut size={18} />
+              <span>تسجيل الخروج من الحساب</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Inactivity Warning Modal */}
       {showInactivityModal && (
@@ -413,7 +582,7 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { currentUser, loading } = useApp();
+  const { currentUser, loading, systemLogo } = useApp();
 
   if (loading) {
     return (
@@ -427,7 +596,21 @@ function AppContent() {
         color: '#fff',
         gap: '16px'
       }}>
-        <div className="pulse-critical-badge" style={{ fontSize: '32px' }}>☕</div>
+        {systemLogo ? (
+          <img 
+            src={systemLogo} 
+            alt="Logo" 
+            className="pulse-critical-badge" 
+            style={{ 
+              width: '80px', 
+              height: '80px', 
+              objectFit: 'contain',
+              borderRadius: '16px'
+            }} 
+          />
+        ) : (
+          <div className="pulse-critical-badge" style={{ fontSize: '32px' }}>☕</div>
+        )}
         <p style={{ fontSize: '14px', color: 'var(--gold-primary)', fontWeight: 600 }}>جاري مزامنة كافيه ألحان مع السحابة...</p>
       </div>
     );
