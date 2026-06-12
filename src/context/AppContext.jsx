@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getFirestoreInstance } from '../firebase';
+import { collection, onSnapshot, doc, setDoc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 const AppContext = createContext();
 
@@ -22,6 +24,7 @@ const INITIAL_TASKS = [
     status: 'completed',
     isCritical: true,
     dueTime: '07:30',
+    isArchived: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
     completedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
     completedBy: 'staff_barista'
@@ -36,6 +39,7 @@ const INITIAL_TASKS = [
     status: 'pending',
     isCritical: true,
     dueTime: '12:00',
+    isArchived: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
     completedAt: null,
     completedBy: null
@@ -50,6 +54,7 @@ const INITIAL_TASKS = [
     status: 'pending',
     isCritical: true,
     dueTime: '23:30',
+    isArchived: false,
     createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
     completedAt: null,
     completedBy: null
@@ -64,6 +69,7 @@ const INITIAL_TASKS = [
     status: 'pending',
     isCritical: false,
     dueTime: '23:45',
+    isArchived: false,
     createdAt: new Date().toISOString(),
     completedAt: null,
     completedBy: null
@@ -98,6 +104,13 @@ const INITIAL_ACTIVITIES = [
 ];
 
 export const AppProvider = ({ children }) => {
+  // Load dynamic Firebase Config
+  const [firebaseConfig, setFirebaseConfig] = useState(() => {
+    const saved = localStorage.getItem('alhan_firebase_config');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  // State initialization (Local Fallbacks)
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem('alhan_users');
     return saved ? JSON.parse(saved) : INITIAL_USERS;
@@ -115,21 +128,83 @@ export const AppProvider = ({ children }) => {
 
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('alhan_current_user');
-    return saved ? JSON.parse(saved) : null; // Defaults to null (not logged in)
+    return saved ? JSON.parse(saved) : null;
   });
 
-  // Persist states
+  // Check if Firebase is active
+  const db = getFirestoreInstance(firebaseConfig);
+  const isCloudActive = db !== null;
+
+  // Real-time Firestore sync & Seeding
   useEffect(() => {
-    localStorage.setItem('alhan_users', JSON.stringify(users));
-  }, [users]);
+    if (!isCloudActive) return;
+
+    // 1. Sync Users
+    const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+      if (snapshot.empty) {
+        // Seed Firestore
+        INITIAL_USERS.forEach(async (user) => {
+          await setDoc(doc(db, "users", user.id), user);
+        });
+      } else {
+        const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        setUsers(list);
+      }
+    });
+
+    // 2. Sync Tasks
+    const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
+      if (snapshot.empty) {
+        // Seed Firestore
+        INITIAL_TASKS.forEach(async (task) => {
+          await setDoc(doc(db, "tasks", task.id), task);
+        });
+      } else {
+        const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setTasks(list);
+      }
+    });
+
+    // 3. Sync Activities
+    const unsubActivities = onSnapshot(collection(db, "activities"), (snapshot) => {
+      if (snapshot.empty) {
+        // Seed Firestore
+        INITIAL_ACTIVITIES.forEach(async (act) => {
+          await setDoc(doc(db, "activities", act.id), act);
+        });
+      } else {
+        const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        setActivities(list);
+      }
+    });
+
+    return () => {
+      unsubUsers();
+      unsubTasks();
+      unsubActivities();
+    };
+  }, [isCloudActive]);
+
+  // Persist Local States only if cloud is inactive
+  useEffect(() => {
+    if (!isCloudActive) {
+      localStorage.setItem('alhan_users', JSON.stringify(users));
+    }
+  }, [users, isCloudActive]);
 
   useEffect(() => {
-    localStorage.setItem('alhan_tasks', JSON.stringify(tasks));
-  }, [tasks]);
+    if (!isCloudActive) {
+      localStorage.setItem('alhan_tasks', JSON.stringify(tasks));
+    }
+  }, [tasks, isCloudActive]);
 
   useEffect(() => {
-    localStorage.setItem('alhan_activities', JSON.stringify(activities));
-  }, [activities]);
+    if (!isCloudActive) {
+      localStorage.setItem('alhan_activities', JSON.stringify(activities));
+    }
+  }, [activities, isCloudActive]);
 
   useEffect(() => {
     if (currentUser) {
@@ -140,7 +215,7 @@ export const AppProvider = ({ children }) => {
   }, [currentUser]);
 
   // Log activity helper
-  const logActivity = (action, details, userId, userName) => {
+  const logActivity = async (action, details, userId, userName) => {
     const activeId = userId || (currentUser ? currentUser.id : 'system');
     const activeName = userName || (currentUser ? currentUser.name : 'النظام');
     
@@ -152,7 +227,12 @@ export const AppProvider = ({ children }) => {
       action,
       details
     };
-    setActivities(prev => [newActivity, ...prev].slice(0, 50));
+
+    if (isCloudActive) {
+      await setDoc(doc(db, "activities", newActivity.id), newActivity);
+    } else {
+      setActivities(prev => [newActivity, ...prev].slice(0, 50));
+    }
   };
 
   // Login User
@@ -179,7 +259,7 @@ export const AppProvider = ({ children }) => {
   };
 
   // Add Task
-  const addTask = ({ title, description, category, assignedTo, isCritical, dueTime }) => {
+  const addTask = async ({ title, description, category, assignedTo, isCritical, dueTime }) => {
     const assignedUser = users.find(u => u.id === assignedTo);
     const newTask = {
       id: `task_${Date.now()}`,
@@ -191,12 +271,18 @@ export const AppProvider = ({ children }) => {
       status: 'pending',
       isCritical,
       dueTime,
+      isArchived: false,
       createdAt: new Date().toISOString(),
       completedAt: null,
       completedBy: null
     };
 
-    setTasks(prev => [newTask, ...prev]);
+    if (isCloudActive) {
+      await setDoc(doc(db, "tasks", newTask.id), newTask);
+    } else {
+      setTasks(prev => [newTask, ...prev]);
+    }
+
     logActivity(
       'create_task',
       `أضاف مهمة ${isCritical ? 'حرجة ⚠️' : 'عادية'} جديدة: "${title}" وأسندها إلى "${assignedUser ? assignedUser.name : 'غير محدد'}".`
@@ -204,86 +290,123 @@ export const AppProvider = ({ children }) => {
   };
 
   // Toggle Task (Complete / Uncomplete)
-  const toggleTaskStatus = (taskId) => {
-    setTasks(prev =>
-      prev.map(task => {
-        if (task.id === taskId) {
-          const newStatus = task.status === 'completed' ? 'pending' : 'completed';
-          const completedAt = newStatus === 'completed' ? new Date().toISOString() : null;
-          const completedBy = newStatus === 'completed' ? currentUser.id : null;
+  const toggleTaskStatus = async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
 
-          // Log action
-          if (newStatus === 'completed') {
-            logActivity('complete_task', `أنجز المهمة: "${task.title}".`);
-          } else {
-            logActivity('uncomplete_task', `أعاد فتح المهمة: "${task.title}".`);
-          }
+    const newStatus = task.status === 'completed' ? 'pending' : 'completed';
+    const completedAt = newStatus === 'completed' ? new Date().toISOString() : null;
+    const completedBy = newStatus === 'completed' ? currentUser.id : null;
 
-          return { ...task, status: newStatus, completedAt, completedBy };
-        }
-        return task;
-      })
-    );
-  };
+    if (isCloudActive) {
+      await updateDoc(doc(db, "tasks", taskId), {
+        status: newStatus,
+        completedAt,
+        completedBy
+      });
+    } else {
+      setTasks(prev =>
+        prev.map(t => t.id === taskId ? { ...t, status: newStatus, completedAt, completedBy } : t)
+      );
+    }
 
-  // Delete Task
-  const deleteTask = (taskId) => {
-    const taskToDelete = tasks.find(t => t.id === taskId);
-    setTasks(prev => prev.filter(t => t.id !== taskId));
-    if (taskToDelete) {
-      logActivity('delete_task', `حذف المهمة: "${taskToDelete.title}".`);
+    if (newStatus === 'completed') {
+      logActivity('complete_task', `أنجز المهمة: "${task.title}".`);
+    } else {
+      logActivity('uncomplete_task', `أعاد فتح المهمة: "${task.title}".`);
     }
   };
 
+  // Delete Task
+  const deleteTask = async (taskId) => {
+    const taskToDelete = tasks.find(t => t.id === taskId);
+    if (!taskToDelete) return;
+
+    if (isCloudActive) {
+      await deleteDoc(doc(db, "tasks", taskId));
+    } else {
+      setTasks(prev => prev.filter(t => t.id !== taskId));
+    }
+
+    logActivity('delete_task', `حذف المهمة: "${taskToDelete.title}".`);
+  };
+
   // Archive Task
-  const archiveTask = (taskId) => {
-    setTasks(prev =>
-      prev.map(task => {
-        if (task.id === taskId) {
-          logActivity('archive_task', `قام بأرشفة المهمة المكتملة: "${task.title}".`);
-          return { ...task, isArchived: true };
-        }
-        return task;
-      })
-    );
+  const archiveTask = async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (isCloudActive) {
+      await updateDoc(doc(db, "tasks", taskId), { isArchived: true });
+    } else {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isArchived: true } : t));
+    }
+
+    logActivity('archive_task', `قام بأرشفة المهمة المكتملة: "${task.title}".`);
   };
 
   // Unarchive Task
-  const unarchiveTask = (taskId) => {
-    setTasks(prev =>
-      prev.map(task => {
-        if (task.id === taskId) {
-          logActivity('unarchive_task', `أعاد استعادة المهمة المؤرشفة: "${task.title}".`);
-          return { ...task, isArchived: false };
-        }
-        return task;
-      })
-    );
+  const unarchiveTask = async (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    if (isCloudActive) {
+      await updateDoc(doc(db, "tasks", taskId), { isArchived: false });
+    } else {
+      setTasks(prev => prev.map(t => t.id === taskId ? { ...t, isArchived: false } : t));
+    }
+
+    logActivity('unarchive_task', `أعاد استعادة المهمة المؤرشفة: "${task.title}".`);
   };
 
   // Add new User (Manager or Staff)
-  const addUser = ({ name, role, avatar, email, password }) => {
+  const addUser = async ({ name, role, avatar, email, password }) => {
     const defaultEmail = `${name.replace(/\s+/g, '.').toLowerCase()}@alhan.com`;
+    const newUserId = `user_${Date.now()}`;
     const newUser = {
-      id: `user_${Date.now()}`,
+      id: newUserId,
       name,
       role,
       avatar,
       email: email || defaultEmail,
-      password: password || '123' // Default password is 123
+      password: password || '123'
     };
-    setUsers(prev => [...prev, newUser]);
+
+    if (isCloudActive) {
+      await setDoc(doc(db, "users", newUserId), newUser);
+    } else {
+      setUsers(prev => [...prev, newUser]);
+    }
+
     logActivity('add_user', `أضاف عضواً جديداً بصلاحية ${role === 'manager' ? 'مدير' : 'موظف'}: "${name}".`);
     return newUser;
   };
 
   // Delete User
-  const deleteUser = (userId) => {
+  const deleteUser = async (userId) => {
     const userToDelete = users.find(u => u.id === userId);
-    if (userToDelete) {
+    if (!userToDelete) return;
+
+    if (isCloudActive) {
+      await deleteDoc(doc(db, "users", userId));
+    } else {
       setUsers(prev => prev.filter(u => u.id !== userId));
-      logActivity('delete_user', `قام بحذف العضو: "${userToDelete.name}" من نظام فريق العمل.`);
     }
+
+    logActivity('delete_user', `قام بحذف العضو: "${userToDelete.name}" من نظام فريق العمل.`);
+  };
+
+  // Update Firebase configuration dynamically
+  const updateFirebaseConfig = (config) => {
+    if (config && config.apiKey && config.projectId) {
+      localStorage.setItem('alhan_firebase_config', JSON.stringify(config));
+      setFirebaseConfig(config);
+    } else {
+      localStorage.removeItem('alhan_firebase_config');
+      setFirebaseConfig(null);
+    }
+    // Reload page to re-initialize Firebase instance
+    window.location.reload();
   };
 
   return (
@@ -293,6 +416,9 @@ export const AppProvider = ({ children }) => {
         tasks,
         activities,
         currentUser,
+        isCloudActive,
+        firebaseConfig,
+        updateFirebaseConfig,
         loginUser,
         logoutUser,
         addTask,
