@@ -104,18 +104,25 @@ const INITIAL_ACTIVITIES = [
 ];
 
 export const AppProvider = ({ children }) => {
+  // Check if Firebase is active synchronously to guide state initialization
+  const db = getFirestoreInstance();
+  const isCloudActive = db !== null;
+
   // State initialization (Local Fallbacks)
   const [users, setUsers] = useState(() => {
+    if (isCloudActive) return [];
     const saved = localStorage.getItem('alhan_users');
     return saved ? JSON.parse(saved) : INITIAL_USERS;
   });
 
   const [tasks, setTasks] = useState(() => {
+    if (isCloudActive) return [];
     const saved = localStorage.getItem('alhan_tasks');
     return saved ? JSON.parse(saved) : INITIAL_TASKS;
   });
 
   const [activities, setActivities] = useState(() => {
+    if (isCloudActive) return [];
     const saved = localStorage.getItem('alhan_activities');
     return saved ? JSON.parse(saved) : INITIAL_ACTIVITIES;
   });
@@ -125,13 +132,21 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Check if Firebase is active
-  const db = getFirestoreInstance();
-  const isCloudActive = db !== null;
+  const [loading, setLoading] = useState(isCloudActive);
 
   // Real-time Firestore sync & Seeding
   useEffect(() => {
     if (!isCloudActive) return;
+
+    let usersLoaded = false;
+    let tasksLoaded = false;
+    let activitiesLoaded = false;
+
+    const checkLoadingComplete = () => {
+      if (usersLoaded && tasksLoaded && activitiesLoaded) {
+        setLoading(false);
+      }
+    };
 
     // 1. Sync Users & Seed all collections only if users table is empty
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
@@ -150,6 +165,8 @@ export const AppProvider = ({ children }) => {
         const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
         setUsers(list);
       }
+      usersLoaded = true;
+      checkLoadingComplete();
     });
 
     // 2. Sync Tasks (Do not auto-seed if empty, to support system resetting)
@@ -161,6 +178,8 @@ export const AppProvider = ({ children }) => {
       } else {
         setTasks([]);
       }
+      tasksLoaded = true;
+      checkLoadingComplete();
     });
 
     // 3. Sync Activities (Do not auto-seed if empty, to support system resetting)
@@ -172,6 +191,8 @@ export const AppProvider = ({ children }) => {
       } else {
         setActivities([]);
       }
+      activitiesLoaded = true;
+      checkLoadingComplete();
     });
 
     return () => {
@@ -451,6 +472,7 @@ export const AppProvider = ({ children }) => {
         activities,
         currentUser,
         isCloudActive,
+        loading,
         loginUser,
         logoutUser,
         addTask,

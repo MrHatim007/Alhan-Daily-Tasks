@@ -259,7 +259,25 @@ function Dashboard() {
 }
 
 function AppContent() {
-  const { currentUser } = useApp();
+  const { currentUser, loading } = useApp();
+
+  if (loading) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: 'var(--bg-espresso)',
+        color: '#fff',
+        gap: '16px'
+      }}>
+        <div className="pulse-critical-badge" style={{ fontSize: '32px' }}>☕</div>
+        <p style={{ fontSize: '14px', color: 'var(--gold-primary)', fontWeight: 600 }}>جاري مزامنة كافيه ألحان مع السحابة...</p>
+      </div>
+    );
+  }
 
   // If no user is logged in, show the Login screen
   if (!currentUser) {
