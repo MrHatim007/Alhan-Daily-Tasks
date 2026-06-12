@@ -1,40 +1,60 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Check, Trash2, Clock, User, AlertTriangle, Search, Filter, Tag, CheckSquare, Coffee, Sparkles, Package, CreditCard, Lock, HelpCircle, Archive } from 'lucide-react';
+import { Check, Trash2, Clock, User, AlertTriangle, Search, Filter, Tag, CheckSquare, Archive } from 'lucide-react';
 
 export default function TaskList() {
-  const { tasks, users, currentUser, toggleTaskStatus, deleteTask, deleteAllTasks, archiveTask } = useApp();
+  const { 
+    tasks, users, currentUser, toggleTaskStatus, 
+    deleteTask, deleteAllTasks, archiveTask,
+    categories, priorities, roles 
+  } = useApp();
+
+  const currentUserRole = roles.find(r => r.id === currentUser.role);
+  const userPermission = currentUserRole ? currentUserRole.permission : currentUser.role;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, pending, completed
   const [criticalFilter, setCriticalFilter] = useState('all'); // all, critical
   const [categoryFilter, setCategoryFilter] = useState('all'); // all, preparations, cleaning, etc.
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
+  
   const [assigneeFilter, setAssigneeFilter] = useState(() => {
     // If staff, default to filtering their own tasks
-    return currentUser.role === 'staff' ? currentUser.id : 'all';
+    return userPermission === 'staff' ? currentUser.id : 'all';
   });
 
-  const getCategoryIcon = (cat) => {
-    switch (cat) {
-      case 'preparations': return <Coffee size={14} />;
-      case 'cleaning': return <Sparkles size={14} />;
-      case 'inventory': return <Package size={14} />;
-      case 'customer_service': return <CreditCard size={14} />;
-      case 'closing': return <Lock size={14} />;
-      default: return <HelpCircle size={14} />;
-    }
+  const getTaskCategory = (task) => {
+    return categories.find(c => c.id === task.category) || { label: 'أخرى', emoji: '📝' };
   };
 
-  const getCategoryLabel = (cat) => {
-    switch (cat) {
-      case 'preparations': return 'تحضير';
-      case 'cleaning': return 'تنظيف';
-      case 'inventory': return 'جرد ومخزون';
-      case 'customer_service': return 'خدمة وكاشير';
-      case 'closing': return 'إغلاق';
-      default: return 'أخرى';
+  const getTaskPriority = (task) => {
+    if (task.priority) {
+      return priorities.find(p => p.id === task.priority) || { label: 'عادي 🟢', color: '#10b981' };
     }
+    // Fallback for older tasks
+    return task.isCritical 
+      ? { label: 'عاجل جداً 🚨', color: '#f43f5e' } 
+      : { label: 'عادي 🟢', color: '#10b981' };
+  };
+
+  const formatDueDateTime = (dueDateTimeStr, dueTimeStr) => {
+    if (dueDateTimeStr) {
+      try {
+        const date = new Date(dueDateTimeStr);
+        return date.toLocaleDateString('ar-EG', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch (e) {
+        return dueDateTimeStr;
+      }
+    }
+    return dueTimeStr ? `اليوم، الساعة ${dueTimeStr}` : 'غير محدد';
   };
 
   // Find user details by ID
@@ -51,7 +71,8 @@ export default function TaskList() {
                           (statusFilter === 'completed' && task.status === 'completed');
 
     const matchesCritical = criticalFilter === 'all' || 
-                            (criticalFilter === 'critical' && task.isCritical);
+                            task.priority === criticalFilter ||
+                            (criticalFilter === 'urgent' && task.isCritical); // fallback
 
     const matchesCategory = categoryFilter === 'all' || 
                             task.category === categoryFilter;
@@ -65,7 +86,7 @@ export default function TaskList() {
   const canDeleteTask = (task) => {
     // Owner can delete any task
     // Manager/Creator can delete tasks they created
-    return currentUser.role === 'owner' || task.assignedBy === currentUser.id;
+    return userPermission === 'owner' || task.assignedBy === currentUser.id;
   };
 
   return (
@@ -82,7 +103,7 @@ export default function TaskList() {
           </p>
         </div>
 
-        {currentUser.role === 'owner' && tasks.filter(t => !t.isArchived).length > 0 && (
+        {userPermission === 'owner' && tasks.filter(t => !t.isArchived).length > 0 && (
           <button 
             className="btn btn-secondary" 
             onClick={() => setShowDeleteAllConfirm(true)}
@@ -125,26 +146,26 @@ export default function TaskList() {
               className={`filter-tab-btn ${statusFilter === 'all' ? 'active' : ''}`}
               onClick={() => setStatusFilter('all')}
             >
-              الكل ({tasks.length})
+              الكل ({tasks.filter(t => !t.isArchived).length})
             </button>
             <button 
               className={`filter-tab-btn ${statusFilter === 'pending' ? 'active' : ''}`}
               onClick={() => setStatusFilter('pending')}
             >
-              المعلقة ({tasks.filter(t => t.status === 'pending').length})
+              المعلقة ({tasks.filter(t => !t.isArchived && t.status === 'pending').length})
             </button>
             <button 
               className={`filter-tab-btn ${statusFilter === 'completed' ? 'active' : ''}`}
               onClick={() => setStatusFilter('completed')}
             >
-              المكتملة ({tasks.filter(t => t.status === 'completed').length})
+              المكتملة ({tasks.filter(t => !t.isArchived && t.status === 'completed').length})
             </button>
           </div>
 
           {/* Quick Filters selects */}
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: '100%', justifyContent: 'flex-start', marginTop: '4px' }}>
             
-            {/* Criticality Filter */}
+            {/* Priority Filter */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Filter size={14} style={{ color: 'var(--gold-primary)' }} />
               <select 
@@ -154,7 +175,11 @@ export default function TaskList() {
                 style={{ padding: '6px 12px', fontSize: '12px', width: 'auto', minWidth: '120px' }}
               >
                 <option value="all">كل درجات الأهمية</option>
-                <option value="critical">مهام حرجة فقط ⚠️</option>
+                {priorities.map(pri => (
+                  <option key={pri.id} value={pri.id}>
+                    {pri.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -168,11 +193,11 @@ export default function TaskList() {
                 style={{ padding: '6px 12px', fontSize: '12px', width: 'auto', minWidth: '120px' }}
               >
                 <option value="all">كل التصنيفات</option>
-                <option value="preparations">تجهيز وتحضير</option>
-                <option value="cleaning">نظافة وتعقيم</option>
-                <option value="inventory">جرد ومخزون</option>
-                <option value="customer_service">خدمة وكاشير</option>
-                <option value="closing">إغلاق</option>
+                {categories.map(cat => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.emoji} {cat.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -186,16 +211,19 @@ export default function TaskList() {
                 style={{ padding: '6px 12px', fontSize: '12px', width: 'auto', minWidth: '150px' }}
               >
                 <option value="all">كل الموظفين والمديرين</option>
-                {users.map(u => (
-                  <option key={u.id} value={u.id}>
-                    {u.avatar} {u.name} {u.id === currentUser.id ? '(أنت)' : ''}
-                  </option>
-                ))}
+                {users.map(u => {
+                  const uRole = roles.find(r => r.id === u.role) || { label: u.role };
+                  return (
+                    <option key={u.id} value={u.id}>
+                      {u.avatar} {u.name} ({uRole.label})
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
             {/* My Tasks Quick Filter for Staff */}
-            {currentUser.role === 'staff' && assigneeFilter !== currentUser.id && (
+            {userPermission === 'staff' && assigneeFilter !== currentUser.id && (
               <button 
                 className="btn btn-secondary"
                 onClick={() => setAssigneeFilter(currentUser.id)}
@@ -221,12 +249,13 @@ export default function TaskList() {
             const assignee = getUserById(task.assignedTo);
             const assigner = getUserById(task.assignedBy);
             const completer = task.completedBy ? getUserById(task.completedBy) : null;
-            const isTaskCritical = task.isCritical && task.status === 'pending';
+            const taskPriority = getTaskPriority(task);
+            const isTaskUrgent = (task.priority === 'urgent' || task.isCritical) && task.status === 'pending';
 
             return (
               <div 
                 key={task.id} 
-                className={`glass-panel task-card ${task.status === 'completed' ? 'completed' : ''} ${isTaskCritical ? 'critical-glow-border animate-slide-in' : 'animate-slide-in'}`}
+                className={`glass-panel task-card ${task.status === 'completed' ? 'completed' : ''} ${isTaskUrgent ? 'critical-glow-border animate-slide-in' : 'animate-slide-in'}`}
               >
                 <div className="task-card-header">
                   {/* Round Checkbox for completion */}
@@ -242,17 +271,15 @@ export default function TaskList() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span className="task-card-title">{task.title}</span>
                       
-                      {/* Critical badge */}
-                      {task.isCritical && (
-                        <span className={`badge badge-critical ${isTaskCritical ? 'pulse-critical-badge' : ''}`}>
-                          <AlertTriangle size={10} /> حرجة للغاية
-                        </span>
-                      )}
+                      {/* Custom Priority Badge */}
+                      <span className="badge" style={{ fontSize: '10px', backgroundColor: `${taskPriority.color}15`, color: taskPriority.color, borderColor: `${taskPriority.color}30` }}>
+                        {taskPriority.label}
+                      </span>
 
-                      {/* Category Badge */}
+                      {/* Custom Category Badge */}
                       <span className="badge badge-normal" style={{ fontSize: '10px' }}>
-                        {getCategoryIcon(task.category)}
-                        <span style={{ marginRight: '4px' }}>{getCategoryLabel(task.category)}</span>
+                        <span>{getTaskCategory(task).emoji}</span>
+                        <span style={{ marginRight: '4px' }}>{getTaskCategory(task).label}</span>
                       </span>
                     </div>
 
@@ -263,7 +290,7 @@ export default function TaskList() {
 
                   {/* Actions Group */}
                   <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                    {currentUser.role === 'owner' && task.status === 'completed' && (
+                    {userPermission === 'owner' && task.status === 'completed' && (
                       <button 
                         onClick={() => archiveTask(task.id)}
                         title="أرشفة المهمة"
@@ -290,7 +317,7 @@ export default function TaskList() {
                   <div className="task-meta-group">
                     <span className="task-meta-item">
                       <Clock size={12} />
-                      تسليم: {task.dueTime}
+                      تسليم: {formatDueDateTime(task.dueDateTime, task.dueTime)}
                     </span>
                     <span className="user-badge-tag">
                       <span>المنفذ:</span>

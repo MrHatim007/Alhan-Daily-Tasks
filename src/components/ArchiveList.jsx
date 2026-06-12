@@ -1,34 +1,20 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Archive, Trash2, RotateCcw, Clock, CheckSquare, Search, Tag, Coffee, Sparkles, Package, CreditCard, Lock, HelpCircle, AlertTriangle } from 'lucide-react';
+import { Archive, Trash2, RotateCcw, Clock, Search, Tag, AlertTriangle } from 'lucide-react';
 
 export default function ArchiveList() {
-  const { tasks, users, unarchiveTask, deleteTask, deleteAllTasks } = useApp();
+  const { 
+    tasks, users, unarchiveTask, deleteTask, 
+    categories, priorities 
+  } = useApp();
+
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
-  const getCategoryIcon = (cat) => {
-    switch (cat) {
-      case 'preparations': return <Coffee size={14} />;
-      case 'cleaning': return <Sparkles size={14} />;
-      case 'inventory': return <Package size={14} />;
-      case 'customer_service': return <CreditCard size={14} />;
-      case 'closing': return <Lock size={14} />;
-      default: return <HelpCircle size={14} />;
-    }
-  };
-
-  const getCategoryLabel = (cat) => {
-    switch (cat) {
-      case 'preparations': return 'تحضير';
-      case 'cleaning': return 'تنظيف';
-      case 'inventory': return 'جرد ومخزون';
-      case 'customer_service': return 'خدمة وكاشير';
-      case 'closing': return 'إغلاق';
-      default: return 'أخرى';
-    }
+  const getTaskCategory = (task) => {
+    return categories.find(c => c.id === task.category) || { label: 'أخرى', emoji: '📝' };
   };
 
   const getUserById = (id) => users.find(u => u.id === id) || { name: 'مستخدم محذوف', avatar: '❓' };
@@ -44,6 +30,25 @@ export default function ArchiveList() {
 
     return matchesSearch && matchesCategory;
   });
+
+  const formatDueDateTime = (dueDateTimeStr, dueTimeStr) => {
+    if (dueDateTimeStr) {
+      try {
+        const date = new Date(dueDateTimeStr);
+        return date.toLocaleDateString('ar-EG', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch (e) {
+        return dueDateTimeStr;
+      }
+    }
+    return dueTimeStr ? `الساعة ${dueTimeStr}` : 'غير محدد';
+  };
 
   const formatDateTime = (isoString) => {
     if (!isoString) return '';
@@ -111,11 +116,11 @@ export default function ArchiveList() {
             style={{ padding: '6px 12px', fontSize: '12px', width: 'auto', minWidth: '150px' }}
           >
             <option value="all">كل التصنيفات</option>
-            <option value="preparations">تجهيز وتحضير</option>
-            <option value="cleaning">نظافة وتعقيم</option>
-            <option value="inventory">جرد ومخزون</option>
-            <option value="customer_service">خدمة وكاشير</option>
-            <option value="closing">إغلاق</option>
+            {categories.map(cat => (
+              <option key={cat.id} value={cat.id}>
+                {cat.emoji} {cat.label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -131,8 +136,8 @@ export default function ArchiveList() {
         ) : (
           archivedTasks.map((task) => {
             const assignee = getUserById(task.assignedTo);
-            const assigner = getUserById(task.assignedBy);
             const completer = task.completedBy ? getUserById(task.completedBy) : null;
+            const taskCategory = getTaskCategory(task);
 
             return (
               <div 
@@ -145,8 +150,8 @@ export default function ArchiveList() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <span className="task-card-title">{task.title}</span>
                       <span className="badge badge-normal" style={{ fontSize: '10px' }}>
-                        {getCategoryIcon(task.category)}
-                        <span style={{ marginRight: '4px' }}>{getCategoryLabel(task.category)}</span>
+                        <span>{taskCategory.emoji}</span>
+                        <span style={{ marginRight: '4px' }}>{taskCategory.label}</span>
                       </span>
                     </div>
                     {task.description && (
@@ -179,7 +184,7 @@ export default function ArchiveList() {
                   <div className="task-meta-group">
                     <span className="task-meta-item">
                       <Clock size={12} />
-                      تاريخ الأرشفة: {formatDateTime(task.createdAt)}
+                      تاريخ التسليم: {formatDueDateTime(task.dueDateTime, task.dueTime)}
                     </span>
                     <span className="user-badge-tag">
                       <span>المنفذ:</span>

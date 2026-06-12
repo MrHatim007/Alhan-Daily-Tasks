@@ -1,55 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { PlusCircle, AlertTriangle, ShieldAlert, Clock, Check } from 'lucide-react';
+import { PlusCircle, ShieldAlert, Clock, Check } from 'lucide-react';
 
 export default function TaskForm() {
-  const { users, currentUser, addTask } = useApp();
+  const { users, currentUser, addTask, categories, priorities, roles } = useApp();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('preparations');
+  const [category, setCategory] = useState('');
   const [assignedTo, setAssignedTo] = useState('');
-  const [isCritical, setIsCritical] = useState(false);
-  const [dueTime, setDueTime] = useState('12:00');
+  const [priority, setPriority] = useState('');
+  const [dueDateTime, setDueDateTime] = useState('');
   const [successMsg, setSuccessMsg] = useState(false);
 
+  // Set default values when categories or priorities load
+  useEffect(() => {
+    if (categories.length > 0 && !category) {
+      setCategory(categories[0].id);
+    }
+  }, [categories, category]);
+
+  useEffect(() => {
+    if (priorities.length > 0 && !priority) {
+      setPriority(priorities[0].id);
+    }
+  }, [priorities, priority]);
+
   // Check if current user has permission to add tasks
-  const canAssign = currentUser.role === 'owner' || currentUser.role === 'manager';
+  const currentUserRole = roles.find(r => r.id === currentUser.role);
+  const userPermission = currentUserRole ? currentUserRole.permission : currentUser.role;
+  const canAssign = userPermission === 'owner' || userPermission === 'manager';
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!title.trim() || !assignedTo) return;
+    if (!title.trim() || !assignedTo || !category || !priority) return;
 
     addTask({
       title,
       description,
       category,
       assignedTo,
-      isCritical,
-      dueTime
+      priority,
+      dueDateTime
     });
 
     // Reset Form
     setTitle('');
     setDescription('');
-    setCategory('preparations');
+    setCategory(categories[0]?.id || '');
     setAssignedTo('');
-    setIsCritical(false);
-    setDueTime('12:00');
+    setPriority(priorities[0]?.id || '');
+    setDueDateTime('');
 
     // Show temporary success feedback
     setSuccessMsg(true);
     setTimeout(() => setSuccessMsg(false), 3000);
-  };
-
-  const getCategoryLabel = (cat) => {
-    switch (cat) {
-      case 'preparations': return 'تجهيز وتحضير ☕';
-      case 'cleaning': return 'نظافة وتعقيم 🧼';
-      case 'inventory': return 'جرد ومخزون 📦';
-      case 'customer_service': return 'خدمة وكاشير 💳';
-      case 'closing': return 'إغلاق الكافيه 🔒';
-      default: return 'أخرى 📝';
-    }
   };
 
   // If user is a staff member, they cannot assign tasks
@@ -110,11 +114,14 @@ export default function TaskForm() {
             required
           >
             <option value="">-- اختر مديراً أو موظفاً --</option>
-            {users.map(u => (
-              <option key={u.id} value={u.id}>
-                {u.avatar} {u.name} ({u.role === 'owner' ? 'صاحب الكافيه' : u.role === 'manager' ? 'مدير' : 'موظف'})
-              </option>
-            ))}
+            {users.map(u => {
+              const uRole = roles.find(r => r.id === u.role) || { label: u.role };
+              return (
+                <option key={u.id} value={u.id}>
+                  {u.avatar} {u.name} ({uRole.label})
+                </option>
+              );
+            })}
           </select>
         </div>
 
@@ -126,46 +133,45 @@ export default function TaskForm() {
               value={category} 
               onChange={(e) => setCategory(e.target.value)}
               className="form-select"
+              required
             >
-              <option value="preparations">تجهيز وتحضير</option>
-              <option value="cleaning">نظافة وتعقيم</option>
-              <option value="inventory">جرد ومخزون</option>
-              <option value="customer_service">خدمة وكاشير</option>
-              <option value="closing">إغلاق الكافيه</option>
-              <option value="other">أخرى</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.emoji} {cat.label}
+                </option>
+              ))}
             </select>
           </div>
 
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Clock size={13} /> وقت التسليم المستهدف:
+              <Clock size={13} /> تاريخ ووقت التسليم المستهدف:
             </label>
             <input 
-              type="time" 
-              value={dueTime} 
-              onChange={(e) => setDueTime(e.target.value)}
+              type="datetime-local" 
+              value={dueDateTime} 
+              onChange={(e) => setDueDateTime(e.target.value)}
               className="form-input"
               required
             />
           </div>
         </div>
 
-        {/* Critical Task Checkbox */}
-        <div className="form-group" style={{ marginTop: '8px', marginBottom: '16px' }}>
-          <label className="form-checkbox-container">
-            <input 
-              type="checkbox" 
-              checked={isCritical} 
-              onChange={(e) => setIsCritical(e.target.checked)}
-            />
-            <span className="form-custom-checkbox" style={{ borderColor: isCritical ? 'var(--color-critical)' : 'rgba(223, 183, 108, 0.3)' }}>
-              {isCritical && <Check size={14} style={{ color: 'var(--bg-espresso-black)' }} />}
-            </span>
-            <span style={{ color: isCritical ? 'var(--color-critical)' : 'rgba(245, 240, 235, 0.8)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {isCritical && <AlertTriangle size={14} className="animate-pulse" />}
-              هذه مهمة حرجة للغاية (Critical Task) ⚠️
-            </span>
-          </label>
+        {/* Priority Dropdown */}
+        <div className="form-group" style={{ marginBottom: '16px' }}>
+          <label>مستوى الأهمية والسرعة:</label>
+          <select 
+            value={priority} 
+            onChange={(e) => setPriority(e.target.value)}
+            className="form-select"
+            required
+          >
+            {priorities.map(pri => (
+              <option key={pri.id} value={pri.id}>
+                {pri.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Submit */}

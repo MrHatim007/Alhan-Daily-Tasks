@@ -7,6 +7,7 @@ import TaskList from './components/TaskList';
 import ActivityLog from './components/ActivityLog';
 import TeamManagement from './components/TeamManagement';
 import ArchiveList from './components/ArchiveList';
+import Settings from './components/Settings';
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -17,14 +18,18 @@ import {
   AlertTriangle, 
   ArrowRight,
   LogOut,
-  Archive
+  Archive,
+  Sliders
 } from 'lucide-react';
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('alhan_active_tab') || 'dashboard';
   });
-  const { currentUser, logoutUser, tasks, isCloudActive } = useApp();
+  const { currentUser, logoutUser, tasks, isCloudActive, roles } = useApp();
+
+  const currentUserRole = roles.find(r => r.id === currentUser.role);
+  const currentUserPermission = currentUserRole ? currentUserRole.permission : currentUser.role;
 
   useEffect(() => {
     localStorage.setItem('alhan_active_tab', activeTab);
@@ -148,6 +153,8 @@ function Dashboard() {
         return <ActivityLog />;
       case 'archive':
         return <ArchiveList />;
+      case 'settings':
+        return <Settings />;
       default:
         return <div>التبويب غير متوفر</div>;
     }
@@ -187,7 +194,7 @@ function Dashboard() {
               <span>المهام اليومية</span>
             </button>
 
-            {(currentUser.role === 'owner' || currentUser.role === 'manager') && (
+            {(currentUserPermission === 'owner' || currentUserPermission === 'manager') && (
               <button 
                 className={`sidebar-link ${activeTab === 'assign' ? 'active' : ''}`}
                 onClick={() => setActiveTab('assign')}
@@ -213,13 +220,23 @@ function Dashboard() {
               <span>سجل النشاطات</span>
             </button>
 
-            {currentUser.role === 'owner' && (
+            {currentUserPermission === 'owner' && (
               <button 
                 className={`sidebar-link ${activeTab === 'archive' ? 'active' : ''}`}
                 onClick={() => setActiveTab('archive')}
               >
                 <Archive size={18} />
                 <span>أرشيف المهام</span>
+              </button>
+            )}
+
+            {(currentUserPermission === 'owner' || currentUserPermission === 'manager') && (
+              <button 
+                className={`sidebar-link ${activeTab === 'settings' ? 'active' : ''}`}
+                onClick={() => setActiveTab('settings')}
+              >
+                <Sliders size={18} />
+                <span>إعدادات النظام</span>
               </button>
             )}
           </nav>
@@ -231,7 +248,7 @@ function Dashboard() {
             <div className="sidebar-user-avatar">{currentUser.avatar}</div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{currentUser.name}</span>
-              <span className="sidebar-user-role">{getRoleLabel(currentUser.role)}</span>
+              <span className="sidebar-user-role">{currentUserRole?.label || currentUser.role}</span>
             </div>
           </div>
 

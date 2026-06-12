@@ -103,6 +103,30 @@ const INITIAL_ACTIVITIES = [
   }
 ];
 
+const INITIAL_CATEGORIES = [
+  { id: 'preparations', label: 'تجهيز وتحضير', emoji: '☕' },
+  { id: 'cleaning', label: 'تنظيف وتعقيم', emoji: '🧹' },
+  { id: 'inventory', label: 'جرد ومخزون', emoji: '📦' },
+  { id: 'customer_service', label: 'خدمة وكاشير', emoji: '💳' },
+  { id: 'closing', label: 'إغلاق الكافيه', emoji: '🔒' },
+  { id: 'other', label: 'أخرى', emoji: '❓' }
+];
+
+const INITIAL_PRIORITIES = [
+  { id: 'urgent', label: 'عاجل جداً 🚨', color: '#f43f5e' },
+  { id: 'high', label: 'مرتفع ⚠️', color: '#f59e0b' },
+  { id: 'normal', label: 'عادي 🟢', color: '#10b981' },
+  { id: 'low', label: 'منخفض ⚪', color: '#6b7280' }
+];
+
+const INITIAL_ROLES = [
+  { id: 'owner', label: 'صاحب الكافيه', permission: 'owner' },
+  { id: 'manager', label: 'مدير فرعي', permission: 'manager' },
+  { id: 'barista', label: 'باريستا', permission: 'staff' },
+  { id: 'cashier', label: 'كاشير', permission: 'staff' },
+  { id: 'inventory', label: 'مدير مخزون', permission: 'staff' }
+];
+
 export const AppProvider = ({ children }) => {
   // Check if Firebase is active synchronously to guide state initialization
   const db = getFirestoreInstance();
@@ -132,6 +156,24 @@ export const AppProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
+  const [categories, setCategories] = useState(() => {
+    if (isCloudActive) return [];
+    const saved = localStorage.getItem('alhan_categories');
+    return saved ? JSON.parse(saved) : INITIAL_CATEGORIES;
+  });
+
+  const [priorities, setPriorities] = useState(() => {
+    if (isCloudActive) return [];
+    const saved = localStorage.getItem('alhan_priorities');
+    return saved ? JSON.parse(saved) : INITIAL_PRIORITIES;
+  });
+
+  const [roles, setRoles] = useState(() => {
+    if (isCloudActive) return [];
+    const saved = localStorage.getItem('alhan_roles');
+    return saved ? JSON.parse(saved) : INITIAL_ROLES;
+  });
+
   const [loading, setLoading] = useState(isCloudActive);
 
   // Real-time Firestore sync & Seeding
@@ -141,9 +183,12 @@ export const AppProvider = ({ children }) => {
     let usersLoaded = false;
     let tasksLoaded = false;
     let activitiesLoaded = false;
+    let categoriesLoaded = false;
+    let prioritiesLoaded = false;
+    let rolesLoaded = false;
 
     const checkLoadingComplete = () => {
-      if (usersLoaded && tasksLoaded && activitiesLoaded) {
+      if (usersLoaded && tasksLoaded && activitiesLoaded && categoriesLoaded && prioritiesLoaded && rolesLoaded) {
         setLoading(false);
       }
     };
@@ -160,6 +205,15 @@ export const AppProvider = ({ children }) => {
         });
         INITIAL_ACTIVITIES.forEach(async (act) => {
           await setDoc(doc(db, "activities", act.id), act);
+        });
+        INITIAL_CATEGORIES.forEach(async (cat) => {
+          await setDoc(doc(db, "categories", cat.id), cat);
+        });
+        INITIAL_PRIORITIES.forEach(async (pri) => {
+          await setDoc(doc(db, "priorities", pri.id), pri);
+        });
+        INITIAL_ROLES.forEach(async (role) => {
+          await setDoc(doc(db, "roles", role.id), role);
         });
       } else {
         const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -195,10 +249,49 @@ export const AppProvider = ({ children }) => {
       checkLoadingComplete();
     });
 
+    // 4. Sync Categories
+    const unsubCategories = onSnapshot(collection(db, "categories"), (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        setCategories(list);
+      } else {
+        setCategories([]);
+      }
+      categoriesLoaded = true;
+      checkLoadingComplete();
+    });
+
+    // 5. Sync Priorities
+    const unsubPriorities = onSnapshot(collection(db, "priorities"), (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        setPriorities(list);
+      } else {
+        setPriorities([]);
+      }
+      prioritiesLoaded = true;
+      checkLoadingComplete();
+    });
+
+    // 6. Sync Roles
+    const unsubRoles = onSnapshot(collection(db, "roles"), (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+        setRoles(list);
+      } else {
+        setRoles([]);
+      }
+      rolesLoaded = true;
+      checkLoadingComplete();
+    });
+
     return () => {
       unsubUsers();
       unsubTasks();
       unsubActivities();
+      unsubCategories();
+      unsubPriorities();
+      unsubRoles();
     };
   }, [isCloudActive]);
 
@@ -220,6 +313,24 @@ export const AppProvider = ({ children }) => {
       localStorage.setItem('alhan_activities', JSON.stringify(activities));
     }
   }, [activities, isCloudActive]);
+
+  useEffect(() => {
+    if (!isCloudActive) {
+      localStorage.setItem('alhan_categories', JSON.stringify(categories));
+    }
+  }, [categories, isCloudActive]);
+
+  useEffect(() => {
+    if (!isCloudActive) {
+      localStorage.setItem('alhan_priorities', JSON.stringify(priorities));
+    }
+  }, [priorities, isCloudActive]);
+
+  useEffect(() => {
+    if (!isCloudActive) {
+      localStorage.setItem('alhan_roles', JSON.stringify(roles));
+    }
+  }, [roles, isCloudActive]);
 
   useEffect(() => {
     if (currentUser) {
@@ -274,8 +385,9 @@ export const AppProvider = ({ children }) => {
   };
 
   // Add Task
-  const addTask = async ({ title, description, category, assignedTo, isCritical, dueTime }) => {
+  const addTask = async ({ title, description, category, assignedTo, priority, dueDateTime, isCritical, dueTime }) => {
     const assignedUser = users.find(u => u.id === assignedTo);
+    const selectedPriority = priorities.find(p => p.id === priority) || { label: 'عادية' };
     const newTask = {
       id: `task_${Date.now()}`,
       title,
@@ -284,8 +396,11 @@ export const AppProvider = ({ children }) => {
       assignedTo,
       assignedBy: currentUser.id,
       status: 'pending',
-      isCritical,
-      dueTime,
+      priority: priority || 'normal',
+      dueDateTime: dueDateTime || null,
+      // Fallback fields for backwards compatibility
+      isCritical: isCritical || priority === 'urgent',
+      dueTime: dueTime || (dueDateTime ? dueDateTime.substring(11, 16) : '12:00'),
       isArchived: false,
       createdAt: new Date().toISOString(),
       completedAt: null,
@@ -300,8 +415,77 @@ export const AppProvider = ({ children }) => {
 
     logActivity(
       'create_task',
-      `أضاف مهمة ${isCritical ? 'حرجة ⚠️' : 'عادية'} جديدة: "${title}" وأسندها إلى "${assignedUser ? assignedUser.name : 'غير محدد'}".`
+      `أضاف مهمة جديدة بأولوية (${selectedPriority.label}): "${title}" وأسندها إلى "${assignedUser ? assignedUser.name : 'غير محدد'}".`
     );
+  };
+
+  // Category management
+  const addCategory = async ({ label, emoji }) => {
+    const id = `cat_${Date.now()}`;
+    const newCat = { id, label, emoji };
+    if (isCloudActive) {
+      await setDoc(doc(db, "categories", id), newCat);
+    } else {
+      setCategories(prev => [...prev, newCat]);
+    }
+    logActivity('add_category', `أضاف تصنيفاً جديداً للمهام: "${label} ${emoji}".`);
+  };
+
+  const deleteCategory = async (catId) => {
+    const cat = categories.find(c => c.id === catId);
+    if (!cat) return;
+    if (isCloudActive) {
+      await deleteDoc(doc(db, "categories", catId));
+    } else {
+      setCategories(prev => prev.filter(c => c.id !== catId));
+    }
+    logActivity('delete_category', `حذف تصنيف المهام: "${cat.label}".`);
+  };
+
+  // Priority management
+  const addPriority = async ({ label, color }) => {
+    const id = `pri_${Date.now()}`;
+    const newPri = { id, label, color };
+    if (isCloudActive) {
+      await setDoc(doc(db, "priorities", id), newPri);
+    } else {
+      setPriorities(prev => [...prev, newPri]);
+    }
+    logActivity('add_priority', `أضاف مستوى أهمية جديد للمهام: "${label}".`);
+  };
+
+  const deletePriority = async (priId) => {
+    const pri = priorities.find(p => p.id === priId);
+    if (!pri) return;
+    if (isCloudActive) {
+      await deleteDoc(doc(db, "priorities", priId));
+    } else {
+      setPriorities(prev => prev.filter(p => p.id !== priId));
+    }
+    logActivity('delete_priority', `حذف مستوى الأهمية للمهام: "${pri.label}".`);
+  };
+
+  // Role management
+  const addRole = async ({ label, permission }) => {
+    const id = `role_${Date.now()}`;
+    const newRole = { id, label, permission };
+    if (isCloudActive) {
+      await setDoc(doc(db, "roles", id), newRole);
+    } else {
+      setRoles(prev => [...prev, newRole]);
+    }
+    logActivity('add_role', `أضاف دوراً وظيفياً جديداً للنظام: "${label}".`);
+  };
+
+  const deleteRole = async (roleId) => {
+    const role = roles.find(r => r.id === roleId);
+    if (!role) return;
+    if (isCloudActive) {
+      await deleteDoc(doc(db, "roles", roleId));
+    } else {
+      setRoles(prev => prev.filter(r => r.id !== roleId));
+    }
+    logActivity('delete_role', `حذف الدور الوظيفي: "${role.label}".`);
   };
 
   // Toggle Task (Complete / Uncomplete)
@@ -473,6 +657,15 @@ export const AppProvider = ({ children }) => {
         currentUser,
         isCloudActive,
         loading,
+        categories,
+        priorities,
+        roles,
+        addCategory,
+        deleteCategory,
+        addPriority,
+        deletePriority,
+        addRole,
+        deleteRole,
         loginUser,
         logoutUser,
         addTask,

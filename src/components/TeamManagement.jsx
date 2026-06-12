@@ -1,23 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Mail, CheckCircle2, ClipboardList, Shield, X, ShieldAlert, Trash2, AlertTriangle, Pencil } from 'lucide-react';
+import { Users, UserPlus, Mail, X, Trash2, AlertTriangle, Pencil } from 'lucide-react';
 
 export default function TeamManagement() {
-  const { users, tasks, currentUser, addUser, deleteUser, updateUser } = useApp();
+  const { users, tasks, currentUser, addUser, deleteUser, updateUser, roles } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [name, setName] = useState('');
-  const [role, setRole] = useState('staff');
+  const [role, setRole] = useState('');
   const [avatar, setAvatar] = useState('☕');
   const [email, setEmail] = useState('');
   const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
   const [password, setPassword] = useState('123');
 
-  const avatarOptions = ['☕', '☀️', '🌙', '📦', '🧁', '💳', '🛠️', '👨‍🍳', '👩‍💼', '📈', '🍩'];
+  const currentUserRole = roles.find(r => r.id === currentUser.role);
+  const userPermission = currentUserRole ? currentUserRole.permission : currentUser.role;
+
+  useEffect(() => {
+    if (roles.length > 0 && !role) {
+      setRole(roles[0].id);
+    }
+  }, [roles, role]);
+
+  const avatarOptions = [
+    { emoji: '☕', name: 'باريستا / قهوة' },
+    { emoji: '☀️', name: 'صباحي' },
+    { emoji: '🌙', name: 'مسائي' },
+    { emoji: '📦', name: 'مخزون / مستودع' },
+    { emoji: '🧁', name: 'حلويات / مطبخ' },
+    { emoji: '💳', name: 'كاشير / حسابات' },
+    { emoji: '🛠️', name: 'صيانة / فني' },
+    { emoji: '👨‍🍳', name: 'طباخ / شيف' },
+    { emoji: '👩‍💼', name: 'إدارة / سكرتارية' },
+    { emoji: '📈', name: 'تسويق / مبيعات' },
+    { emoji: '🍩', name: 'مخبوزات / دونات' }
+  ];
 
   const handleAddMember = (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || !role) return;
 
     if (editingUser) {
       updateUser(editingUser.id, { name, role, avatar, email, password });
@@ -26,7 +47,7 @@ export default function TeamManagement() {
     }
 
     setName('');
-    setRole('staff');
+    setRole(roles[0]?.id || '');
     setAvatar('☕');
     setEmail('');
     setPassword('123');
@@ -46,20 +67,12 @@ export default function TeamManagement() {
 
   const handleCancelForm = () => {
     setName('');
-    setRole('staff');
+    setRole(roles[0]?.id || '');
     setAvatar('☕');
     setEmail('');
     setPassword('123');
     setEditingUser(null);
     setShowForm(false);
-  };
-
-  const getRoleLabel = (role) => {
-    switch (role) {
-      case 'owner': return 'صاحب الكافيه';
-      case 'manager': return 'مدير فرعي';
-      default: return 'موظف';
-    }
   };
 
   // Compute stats for a user
@@ -71,7 +84,7 @@ export default function TeamManagement() {
     return { total, completed, rate };
   };
 
-  const isOwnerOrManager = currentUser.role === 'owner' || currentUser.role === 'manager';
+  const isOwnerOrManager = userPermission === 'owner' || userPermission === 'manager';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -113,7 +126,7 @@ export default function TeamManagement() {
             </button>
           </div>
 
-          <form onSubmit={handleAddMember} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+          <form onSubmit={handleAddMember} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }} className="dashboard-grid">
             <div className="form-group">
               <label>الاسم الكامل:</label>
               <input 
@@ -133,10 +146,13 @@ export default function TeamManagement() {
                 onChange={(e) => setRole(e.target.value)}
                 className="form-select"
                 disabled={editingUser && editingUser.id === currentUser.id}
+                required
               >
-                <option value="owner">صاحب الكافيه (المالك)</option>
-                <option value="manager">مدير قسم / فرع (إسناد ومتابعة)</option>
-                <option value="staff">موظف باريستا / كاشير (تنفيذ مهام فقط)</option>
+                {roles.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.label}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -165,15 +181,27 @@ export default function TeamManagement() {
 
             <div className="form-group" style={{ gridColumn: 'span 2' }}>
               <label>اختر الرمز التعبيري (الأفاتار):</label>
-              <div className="avatar-selector">
-                {avatarOptions.map((emoji) => (
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {avatarOptions.map((opt) => (
                   <button
-                    key={emoji}
+                    key={opt.emoji}
                     type="button"
-                    onClick={() => setAvatar(emoji)}
-                    className={`avatar-option ${avatar === emoji ? 'selected' : ''}`}
+                    onClick={() => setAvatar(opt.emoji)}
+                    style={{
+                      padding: '8px 12px',
+                      fontSize: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      borderRadius: 'var(--border-radius-sm)',
+                      border: avatar === opt.emoji ? '1px solid var(--gold-primary)' : '1px solid rgba(255,255,255,0.05)',
+                      backgroundColor: avatar === opt.emoji ? 'rgba(223,183,108,0.1)' : 'rgba(255,255,255,0.02)',
+                      color: '#fff',
+                      cursor: 'pointer'
+                    }}
                   >
-                    {emoji}
+                    <span>{opt.emoji}</span>
+                    <span>{opt.name}</span>
                   </button>
                 ))}
               </div>
@@ -200,11 +228,13 @@ export default function TeamManagement() {
         {users.map((user) => {
           const stats = getUserStats(user.id);
           const isCurrentUser = currentUser.id === user.id;
+          const uRole = roles.find(r => r.id === user.role) || { label: user.role };
 
           return (
             <div key={user.id} className="glass-panel team-card animate-slide-in" style={{
               border: isCurrentUser ? '1px solid rgba(223, 183, 108, 0.3)' : '1px solid var(--glass-border)',
-              backgroundColor: isCurrentUser ? 'rgba(223, 183, 108, 0.03)' : 'var(--glass-bg)'
+              backgroundColor: isCurrentUser ? 'rgba(223, 183, 108, 0.03)' : 'var(--glass-bg)',
+              position: 'relative'
             }}>
               {isCurrentUser && (
                 <span className="badge badge-critical" style={{ position: 'absolute', top: '12px', right: '12px', left: 'auto', fontSize: '9px', backgroundColor: 'var(--gold-dim)', color: 'var(--gold-primary)', borderColor: 'var(--gold-primary)' }}>
@@ -212,7 +242,7 @@ export default function TeamManagement() {
                 </span>
               )}
               
-              {currentUser.role === 'owner' && !isCurrentUser && (
+              {userPermission === 'owner' && !isCurrentUser && (
                 <button
                   onClick={() => setConfirmDeleteUser(user)}
                   className="btn-danger-text"
@@ -232,7 +262,7 @@ export default function TeamManagement() {
                 </button>
               )}
 
-              {currentUser.role === 'owner' && (
+              {userPermission === 'owner' && (
                 <button
                   onClick={() => handleEditClick(user)}
                   style={{
@@ -260,7 +290,7 @@ export default function TeamManagement() {
               </div>
 
               <span className="team-card-name">{user.name}</span>
-              <span className="team-card-role">{getRoleLabel(user.role)}</span>
+              <span className="team-card-role">{uRole.label}</span>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: 'rgba(245,240,235,0.4)', marginBottom: '16px' }}>
                 <Mail size={12} />
