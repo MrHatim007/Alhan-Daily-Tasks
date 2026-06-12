@@ -35,6 +35,38 @@ function Dashboard() {
     logoutUser();
   };
 
+  // Auto-logout after 1 minute of inactivity
+  useEffect(() => {
+    if (!currentUser) return;
+
+    let timeoutId;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      // 1 minute = 60,000 milliseconds
+      timeoutId = setTimeout(() => {
+        handleLogout();
+      }, 60000);
+    };
+
+    // Listen to mouse movement, mouse clicks, keyboard presses, scroll, and touch events
+    const events = ['mousemove', 'mousedown', 'keypress', 'touchstart', 'scroll'];
+    
+    events.forEach((event) => {
+      window.addEventListener(event, resetTimer);
+    });
+
+    // Start inactivity countdown
+    resetTimer();
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach((event) => {
+        window.removeEventListener(event, resetTimer);
+      });
+    };
+  }, [currentUser]);
+
   const getRoleLabel = (role) => {
     switch (role) {
       case 'owner': return 'صاحب الكافيه';

@@ -207,7 +207,7 @@ export default function TeamManagement() {
               backgroundColor: isCurrentUser ? 'rgba(223, 183, 108, 0.03)' : 'var(--glass-bg)'
             }}>
               {isCurrentUser && (
-                <span className="badge badge-critical" style={{ position: 'absolute', top: '12px', left: '12px', fontSize: '9px', backgroundColor: 'var(--gold-dim)', color: 'var(--gold-primary)', borderColor: 'var(--gold-primary)' }}>
+                <span className="badge badge-critical" style={{ position: 'absolute', top: '12px', right: '12px', left: 'auto', fontSize: '9px', backgroundColor: 'var(--gold-dim)', color: 'var(--gold-primary)', borderColor: 'var(--gold-primary)' }}>
                   أنت
                 </span>
               )}
