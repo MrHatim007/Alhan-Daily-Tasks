@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { History, PlusCircle, CheckCircle, RotateCcw, UserPlus, UserSquare, Trash } from 'lucide-react';
+import { History, PlusCircle, CheckCircle, RotateCcw, UserPlus, UserSquare, Trash, AlertTriangle } from 'lucide-react';
 
 export default function ActivityLog() {
-  const { activities } = useApp();
+  const { activities, clearActivities, currentUser } = useApp();
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const getActionIcon = (action) => {
     switch (action) {
@@ -35,9 +36,22 @@ export default function ActivityLog() {
 
   return (
     <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
-        <History size={18} style={{ color: 'var(--gold-primary)' }} />
-        <h3 style={{ fontSize: '15px' }}>سجل النشاطات الفوري (Activity Log):</h3>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <History size={18} style={{ color: 'var(--gold-primary)' }} />
+          <h3 style={{ fontSize: '15px', margin: 0 }}>سجل النشاطات الفوري (Activity Log):</h3>
+        </div>
+        {currentUser?.role === 'owner' && activities.length > 0 && (
+          <button
+            onClick={() => setShowClearConfirm(true)}
+            className="btn-danger-text"
+            style={{ border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
+            title="مسح سجل النشاطات بالكامل"
+          >
+            <Trash size={14} />
+            <span>مسح السجل</span>
+          </button>
+        )}
       </div>
 
       <div className="activity-list">
@@ -61,6 +75,60 @@ export default function ActivityLog() {
           ))
         )}
       </div>
+
+      {/* Clear Log Confirmation Modal */}
+      {showClearConfirm && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content glass-panel animate-slide-in" style={{ borderColor: 'var(--color-critical)', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-critical-bg)',
+                color: 'var(--color-critical)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} className="pulse-critical-badge">
+                <AlertTriangle size={24} />
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '16px', color: '#fff' }}>تأكيد مسح سجل النشاطات</h3>
+                <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.6)', marginTop: '8px', lineHeight: '1.6' }}>
+                  هل أنت متأكد من مسح سجل النشاطات بالكامل؟ سيتم إفراغ السجل ولا يمكن استعادته.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowClearConfirm(false)}
+                  style={{ flex: 1 }}
+                >
+                  إلغاء
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    clearActivities();
+                    setShowClearConfirm(false);
+                  }}
+                  style={{ 
+                    flex: 1, 
+                    background: 'linear-gradient(135deg, var(--color-critical) 0%, #c2185b 100%)', 
+                    color: '#fff', 
+                    boxShadow: '0 4px 15px rgba(244, 63, 94, 0.25)' 
+                  }}
+                >
+                  مسح الآن
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

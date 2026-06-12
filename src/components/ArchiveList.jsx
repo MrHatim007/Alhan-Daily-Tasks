@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Archive, Trash2, RotateCcw, Clock, CheckSquare, Search, Tag, Coffee, Sparkles, Package, CreditCard, Lock, HelpCircle } from 'lucide-react';
+import { Archive, Trash2, RotateCcw, Clock, CheckSquare, Search, Tag, Coffee, Sparkles, Package, CreditCard, Lock, HelpCircle, AlertTriangle } from 'lucide-react';
 
 export default function ArchiveList() {
-  const { tasks, users, unarchiveTask, deleteTask } = useApp();
+  const { tasks, users, unarchiveTask, deleteTask, deleteAllTasks } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const getCategoryIcon = (cat) => {
     switch (cat) {
@@ -56,14 +58,34 @@ export default function ArchiveList() {
   return (
     <div className="main-dashboard-container">
       {/* Header */}
-      <div>
-        <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Archive style={{ color: 'var(--gold-primary)' }} />
-          أرشيف المهام اليومية المكتملة
-        </h3>
-        <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.5)', marginTop: '4px' }}>
-          استعراض المهام اليومية المكتملة المؤرشفة والقدرة على إدارتها أو حذفها نهائياً
-        </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '8px' }}>
+        <div>
+          <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Archive style={{ color: 'var(--gold-primary)' }} />
+            أرشيف المهام اليومية المكتملة
+          </h3>
+          <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.5)', marginTop: '4px' }}>
+            استعراض المهام اليومية المكتملة المؤرشفة والقدرة على إدارتها أو حذفها نهائياً
+          </p>
+        </div>
+
+        {tasks.filter(t => t.isArchived).length > 0 && (
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setShowDeleteAllConfirm(true)}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              color: 'var(--color-critical)', 
+              borderColor: 'rgba(244, 63, 94, 0.2)',
+              backgroundColor: 'rgba(244, 63, 94, 0.05)'
+            }}
+          >
+            <Trash2 size={16} />
+            حذف كافة الأرشيف نهائياً
+          </button>
+        )}
       </div>
 
       {/* Filters Panel */}
@@ -143,7 +165,7 @@ export default function ArchiveList() {
                     </button>
                     
                     <button 
-                      onClick={() => deleteTask(task.id)}
+                      onClick={() => setTaskToDelete(task)}
                       className="btn-danger-text"
                       title="حذف المهمة نهائياً"
                       style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
@@ -175,6 +197,119 @@ export default function ArchiveList() {
           })
         )}
       </div>
+
+      {/* Task Deletion Confirmation Modal */}
+      {taskToDelete && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel animate-slide-in" style={{ borderColor: 'var(--color-critical)', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-critical-bg)',
+                color: 'var(--color-critical)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} className="pulse-critical-badge">
+                <AlertTriangle size={24} />
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '16px', color: '#fff' }}>تأكيد حذف المهمة المؤرشفة</h3>
+                <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.6)', marginTop: '8px', lineHeight: '1.6' }}>
+                  هل أنت متأكد من حذف المهمة المؤرشفة: <strong>"{taskToDelete.title}"</strong> نهائياً؟
+                  <br />
+                  <span style={{ color: 'var(--color-critical)', fontWeight: 600, fontSize: '12px' }}>تحذير: هذا الإجراء سيحذف المهمة نهائياً من قاعدة البيانات ولا يمكن استعادتها.</span>
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setTaskToDelete(null)}
+                  style={{ flex: 1 }}
+                >
+                  إلغاء
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    deleteTask(taskToDelete.id);
+                    setTaskToDelete(null);
+                  }}
+                  style={{ 
+                    flex: 1, 
+                    background: 'linear-gradient(135deg, var(--color-critical) 0%, #c2185b 100%)', 
+                    color: '#fff', 
+                    boxShadow: '0 4px 15px rgba(244, 63, 94, 0.25)' 
+                  }}
+                >
+                  تأكيد الحذف
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Archive Confirmation Modal */}
+      {showDeleteAllConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel animate-slide-in" style={{ borderColor: 'var(--color-critical)', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-critical-bg)',
+                color: 'var(--color-critical)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} className="pulse-critical-badge">
+                <AlertTriangle size={24} />
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '16px', color: '#fff' }}>تأكيد مسح الأرشيف بالكامل</h3>
+                <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.6)', marginTop: '8px', lineHeight: '1.6' }}>
+                  هل أنت متأكد من حذف <strong>جميع المهام المؤرشفة</strong> نهائياً؟
+                  <br />
+                  <span style={{ color: 'var(--color-critical)', fontWeight: 600, fontSize: '12px' }}>تحذير: سيتم إفراغ الأرشيف تماماً ولا يمكن التراجع عن هذا الإجراء!</span>
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowDeleteAllConfirm(false)}
+                  style={{ flex: 1 }}
+                >
+                  إلغاء
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    // Delete all archived tasks
+                    tasks.filter(t => t.isArchived).forEach(t => deleteTask(t.id));
+                    setShowDeleteAllConfirm(false);
+                  }}
+                  style={{ 
+                    flex: 1, 
+                    background: 'linear-gradient(135deg, var(--color-critical) 0%, #c2185b 100%)', 
+                    color: '#fff', 
+                    boxShadow: '0 4px 15px rgba(244, 63, 94, 0.25)' 
+                  }}
+                >
+                  تأكيد مسح الأرشيف
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,11 +3,13 @@ import { useApp } from '../context/AppContext';
 import { Check, Trash2, Clock, User, AlertTriangle, Search, Filter, Tag, CheckSquare, Coffee, Sparkles, Package, CreditCard, Lock, HelpCircle, Archive } from 'lucide-react';
 
 export default function TaskList() {
-  const { tasks, users, currentUser, toggleTaskStatus, deleteTask, archiveTask } = useApp();
+  const { tasks, users, currentUser, toggleTaskStatus, deleteTask, deleteAllTasks, archiveTask } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, pending, completed
   const [criticalFilter, setCriticalFilter] = useState('all'); // all, critical
   const [categoryFilter, setCategoryFilter] = useState('all'); // all, preparations, cleaning, etc.
+  const [taskToDelete, setTaskToDelete] = useState(null);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [assigneeFilter, setAssigneeFilter] = useState(() => {
     // If staff, default to filtering their own tasks
     return currentUser.role === 'staff' ? currentUser.id : 'all';
@@ -68,6 +70,37 @@ export default function TaskList() {
 
   return (
     <div className="main-dashboard-container">
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', marginBottom: '8px' }}>
+        <div>
+          <h3 style={{ fontSize: '18px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <CheckSquare style={{ color: 'var(--gold-primary)' }} />
+            المهام اليومية النشطة
+          </h3>
+          <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.5)', marginTop: '4px' }}>
+            إدارة ومتابعة وتأكيد المهام اليومية المطلوبة من فريق العمل
+          </p>
+        </div>
+
+        {currentUser.role === 'owner' && tasks.filter(t => !t.isArchived).length > 0 && (
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => setShowDeleteAllConfirm(true)}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '6px', 
+              color: 'var(--color-critical)', 
+              borderColor: 'rgba(244, 63, 94, 0.2)',
+              backgroundColor: 'rgba(244, 63, 94, 0.05)'
+            }}
+          >
+            <Trash2 size={16} />
+            تصفير وحذف كافة المهام
+          </button>
+        )}
+      </div>
+
       {/* Search & Filters Panel */}
       <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
         
@@ -242,7 +275,7 @@ export default function TaskList() {
                     
                     {canDeleteTask(task) && (
                       <button 
-                        onClick={() => deleteTask(task.id)}
+                        onClick={() => setTaskToDelete(task)}
                         className="btn-danger-text"
                         title="حذف المهمة"
                         style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
@@ -281,6 +314,118 @@ export default function TaskList() {
           })
         )}
       </div>
+
+      {/* Task Deletion Confirmation Modal */}
+      {taskToDelete && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel animate-slide-in" style={{ borderColor: 'var(--color-critical)', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-critical-bg)',
+                color: 'var(--color-critical)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} className="pulse-critical-badge">
+                <AlertTriangle size={24} />
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '16px', color: '#fff' }}>تأكيد حذف المهمة</h3>
+                <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.6)', marginTop: '8px', lineHeight: '1.6' }}>
+                  هل أنت متأكد من حذف المهمة: <strong>"{taskToDelete.title}"</strong>؟
+                  <br />
+                  <span style={{ color: 'var(--color-critical)', fontWeight: 600, fontSize: '12px' }}>تحذير: سيتم إزالة المهمة نهائياً ولا يمكن التراجع عنها.</span>
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setTaskToDelete(null)}
+                  style={{ flex: 1 }}
+                >
+                  إلغاء
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    deleteTask(taskToDelete.id);
+                    setTaskToDelete(null);
+                  }}
+                  style={{ 
+                    flex: 1, 
+                    background: 'linear-gradient(135deg, var(--color-critical) 0%, #c2185b 100%)', 
+                    color: '#fff', 
+                    boxShadow: '0 4px 15px rgba(244, 63, 94, 0.25)' 
+                  }}
+                >
+                  تأكيد الحذف
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete All Tasks Confirmation Modal */}
+      {showDeleteAllConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel animate-slide-in" style={{ borderColor: 'var(--color-critical)', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-critical-bg)',
+                color: 'var(--color-critical)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} className="pulse-critical-badge">
+                <AlertTriangle size={24} />
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '16px', color: '#fff' }}>تأكيد تصفير وحذف كافة المهام</h3>
+                <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.6)', marginTop: '8px', lineHeight: '1.6' }}>
+                  هل أنت متأكد من حذف <strong>كافة المهام اليومية</strong> نهائياً من النظام؟
+                  <br />
+                  <span style={{ color: 'var(--color-critical)', fontWeight: 600, fontSize: '12px' }}>تحذير: هذا الإجراء سيقوم بحذف كافة المهام ولا يمكن استعادتها أبداً!</span>
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setShowDeleteAllConfirm(false)}
+                  style={{ flex: 1 }}
+                >
+                  إلغاء
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    deleteAllTasks();
+                    setShowDeleteAllConfirm(false);
+                  }}
+                  style={{ 
+                    flex: 1, 
+                    background: 'linear-gradient(135deg, var(--color-critical) 0%, #c2185b 100%)', 
+                    color: '#fff', 
+                    boxShadow: '0 4px 15px rgba(244, 63, 94, 0.25)' 
+                  }}
+                >
+                  تأكيد تصفير المهام
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

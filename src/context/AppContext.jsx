@@ -104,12 +104,6 @@ const INITIAL_ACTIVITIES = [
 ];
 
 export const AppProvider = ({ children }) => {
-  // Load dynamic Firebase Config
-  const [firebaseConfig, setFirebaseConfig] = useState(() => {
-    const saved = localStorage.getItem('alhan_firebase_config');
-    return saved ? JSON.parse(saved) : null;
-  });
-
   // State initialization (Local Fallbacks)
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem('alhan_users');
@@ -132,19 +126,25 @@ export const AppProvider = ({ children }) => {
   });
 
   // Check if Firebase is active
-  const db = getFirestoreInstance(firebaseConfig);
+  const db = getFirestoreInstance();
   const isCloudActive = db !== null;
 
   // Real-time Firestore sync & Seeding
   useEffect(() => {
     if (!isCloudActive) return;
 
-    // 1. Sync Users
+    // 1. Sync Users & Seed all collections only if users table is empty
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
       if (snapshot.empty) {
-        // Seed Firestore
+        // Seed Firestore for the very first time
         INITIAL_USERS.forEach(async (user) => {
           await setDoc(doc(db, "users", user.id), user);
+        });
+        INITIAL_TASKS.forEach(async (task) => {
+          await setDoc(doc(db, "tasks", task.id), task);
+        });
+        INITIAL_ACTIVITIES.forEach(async (act) => {
+          await setDoc(doc(db, "activities", act.id), act);
         });
       } else {
         const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
@@ -152,31 +152,25 @@ export const AppProvider = ({ children }) => {
       }
     });
 
-    // 2. Sync Tasks
+    // 2. Sync Tasks (Do not auto-seed if empty, to support system resetting)
     const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
-      if (snapshot.empty) {
-        // Seed Firestore
-        INITIAL_TASKS.forEach(async (task) => {
-          await setDoc(doc(db, "tasks", task.id), task);
-        });
-      } else {
+      if (!snapshot.empty) {
         const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
         list.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setTasks(list);
+      } else {
+        setTasks([]);
       }
     });
 
-    // 3. Sync Activities
+    // 3. Sync Activities (Do not auto-seed if empty, to support system resetting)
     const unsubActivities = onSnapshot(collection(db, "activities"), (snapshot) => {
-      if (snapshot.empty) {
-        // Seed Firestore
-        INITIAL_ACTIVITIES.forEach(async (act) => {
-          await setDoc(doc(db, "activities", act.id), act);
-        });
-      } else {
+      if (!snapshot.empty) {
         const list = snapshot.docs.map(d => ({ ...d.data(), id: d.id }));
         list.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
         setActivities(list);
+      } else {
+        setActivities([]);
       }
     });
 
@@ -396,17 +390,57 @@ export const AppProvider = ({ children }) => {
     logActivity('delete_user', `قام بحذف العضو: "${userToDelete.name}" من نظام فريق العمل.`);
   };
 
-  // Update Firebase configuration dynamically
-  const updateFirebaseConfig = (config) => {
-    if (config && config.apiKey && config.projectId) {
-      localStorage.setItem('alhan_firebase_config', JSON.stringify(config));
-      setFirebaseConfig(config);
+  // Clear Activities Log
+  const clearActivities = async () => {
+    if (isCloudActive) {
+      for (const act of activities) {
+        try {
+          await deleteDoc(doc(db, "activities", act.id));
+        } catch (e) {
+          console.error("Error deleting activity doc:", e);
+        }
+      }
     } else {
-      localStorage.removeItem('alhan_firebase_config');
-      setFirebaseConfig(null);
+      setActivities([]);
     }
-    // Reload page to re-initialize Firebase instance
-    window.location.reload();
+  };
+
+  // Delete All Tasks
+  const deleteAllTasks = async () => {
+    if (isCloudActive) {
+      for (const task of tasks) {
+        try {
+          await deleteDoc(doc(db, "tasks", task.id));
+        } catch (e) {
+          console.error("Error deleting task document:", e);
+        }
+      }
+    } else {
+      setTasks([]);
+    }
+    logActivity('delete_all_tasks', `قام بحذف جميع المهام من النظام لتصفيره.`);
+  };
+
+  // Update User
+  const updateUser = async (userId, updates) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const updatedUser = { ...user, ...updates };
+
+    if (isCloudActive) {
+      await setDoc(doc(db, "users", userId), updatedUser);
+    } else {
+      setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    }
+
+    // If updating the currently logged-in user, update the session state too
+    if (currentUser && currentUser.id === userId) {
+      setCurrentUser(updatedUser);
+    }
+
+    logActivity('update_user', `قام بتحديث معلومات العضو: "${updatedUser.name}".`);
+    return updatedUser;
   };
 
   return (
@@ -417,17 +451,18 @@ export const AppProvider = ({ children }) => {
         activities,
         currentUser,
         isCloudActive,
-        firebaseConfig,
-        updateFirebaseConfig,
         loginUser,
         logoutUser,
         addTask,
         toggleTaskStatus,
         deleteTask,
+        deleteAllTasks,
         archiveTask,
         unarchiveTask,
         addUser,
         deleteUser,
+        updateUser,
+        clearActivities,
         logActivity
       }}
     >

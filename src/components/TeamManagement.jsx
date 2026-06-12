@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Mail, CheckCircle2, ClipboardList, Shield, X, ShieldAlert, Trash2, AlertTriangle } from 'lucide-react';
+import { Users, UserPlus, Mail, CheckCircle2, ClipboardList, Shield, X, ShieldAlert, Trash2, AlertTriangle, Pencil } from 'lucide-react';
 
 export default function TeamManagement() {
-  const { users, tasks, currentUser, addUser, deleteUser } = useApp();
+  const { users, tasks, currentUser, addUser, deleteUser, updateUser } = useApp();
   const [showForm, setShowForm] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [name, setName] = useState('');
   const [role, setRole] = useState('staff');
   const [avatar, setAvatar] = useState('☕');
@@ -18,13 +19,38 @@ export default function TeamManagement() {
     e.preventDefault();
     if (!name.trim()) return;
 
-    addUser({ name, role, avatar, email, password });
+    if (editingUser) {
+      updateUser(editingUser.id, { name, role, avatar, email, password });
+    } else {
+      addUser({ name, role, avatar, email, password });
+    }
 
     setName('');
     setRole('staff');
     setAvatar('☕');
     setEmail('');
     setPassword('123');
+    setEditingUser(null);
+    setShowForm(false);
+  };
+
+  const handleEditClick = (user) => {
+    setEditingUser(user);
+    setName(user.name);
+    setRole(user.role);
+    setAvatar(user.avatar);
+    setEmail(user.email);
+    setPassword(user.password || '123');
+    setShowForm(true);
+  };
+
+  const handleCancelForm = () => {
+    setName('');
+    setRole('staff');
+    setAvatar('☕');
+    setEmail('');
+    setPassword('123');
+    setEditingUser(null);
     setShowForm(false);
   };
 
@@ -75,9 +101,11 @@ export default function TeamManagement() {
       {showForm && (
         <div className="glass-panel animate-slide-in" style={{ padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h4 style={{ fontSize: '16px', color: 'var(--gold-primary)' }}>إضافة موظف/مدير جديد لفريق ألحان</h4>
+            <h4 style={{ fontSize: '16px', color: 'var(--gold-primary)' }}>
+              {editingUser ? `تعديل بيانات العضو: ${editingUser.name}` : 'إضافة موظف/مدير جديد لفريق ألحان'}
+            </h4>
             <button 
-              onClick={() => setShowForm(false)} 
+              onClick={handleCancelForm} 
               className="btn-danger-text"
               style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
             >
@@ -104,7 +132,9 @@ export default function TeamManagement() {
                 value={role} 
                 onChange={(e) => setRole(e.target.value)}
                 className="form-select"
+                disabled={editingUser && editingUser.id === currentUser.id}
               >
+                <option value="owner">صاحب الكافيه (المالك)</option>
                 <option value="manager">مدير قسم / فرع (إسناد ومتابعة)</option>
                 <option value="staff">موظف باريستا / كاشير (تنفيذ مهام فقط)</option>
               </select>
@@ -153,12 +183,12 @@ export default function TeamManagement() {
               <button 
                 type="button" 
                 className="btn btn-secondary" 
-                onClick={() => setShowForm(false)}
+                onClick={handleCancelForm}
               >
                 إلغاء
               </button>
               <button type="submit" className="btn btn-primary">
-                إضافة للفريق
+                {editingUser ? 'حفظ التعديلات' : 'إضافة للفريق'}
               </button>
             </div>
           </form>
@@ -199,6 +229,29 @@ export default function TeamManagement() {
                   title="حذف هذا العضو"
                 >
                   <Trash2 size={15} />
+                </button>
+              )}
+
+              {currentUser.role === 'owner' && (
+                <button
+                  onClick={() => handleEditClick(user)}
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: isCurrentUser ? '12px' : '36px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '50%',
+                    color: 'var(--gold-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="تعديل بيانات العضو"
+                >
+                  <Pencil size={15} />
                 </button>
               )}
               

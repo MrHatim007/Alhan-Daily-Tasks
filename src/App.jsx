@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import Login from './components/Login';
 import DashboardStats from './components/DashboardStats';
@@ -16,20 +16,24 @@ import {
   Coffee, 
   AlertTriangle, 
   ArrowRight,
-  Settings,
   LogOut,
-  Archive,
-  X
+  Archive
 } from 'lucide-react';
 
 function Dashboard() {
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const { currentUser, logoutUser, tasks, isCloudActive, firebaseConfig, updateFirebaseConfig } = useApp();
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [rawConfig, setRawConfig] = useState(() => {
-    return firebaseConfig ? JSON.stringify(firebaseConfig, null, 2) : '';
+  const [activeTab, setActiveTab] = useState(() => {
+    return localStorage.getItem('alhan_active_tab') || 'dashboard';
   });
-  const [configError, setConfigError] = useState('');
+  const { currentUser, logoutUser, tasks, isCloudActive } = useApp();
+
+  useEffect(() => {
+    localStorage.setItem('alhan_active_tab', activeTab);
+  }, [activeTab]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('alhan_active_tab');
+    logoutUser();
+  };
 
   const getRoleLabel = (role) => {
     switch (role) {
@@ -39,41 +43,7 @@ function Dashboard() {
     }
   };
 
-  const handleSaveConfig = (e) => {
-    e.preventDefault();
-    setConfigError('');
-    if (!rawConfig.trim()) {
-      setConfigError('يرجى إدخال كود التكوين!');
-      return;
-    }
-    try {
-      let cleaned = rawConfig.trim();
-      // Allow pasting javascript copy format e.g. const config = { ... };
-      if (cleaned.includes('=')) {
-        cleaned = cleaned.split('=').slice(1).join('=').trim();
-      }
-      if (cleaned.endsWith(';')) {
-        cleaned = cleaned.slice(0, -1).trim();
-      }
-      
-      const parsed = JSON.parse(cleaned);
-      if (!parsed.apiKey || !parsed.projectId) {
-        setConfigError('كود التكوين غير مكتمل! يجب أن يحتوي على apiKey و projectId على الأقل.');
-        return;
-      }
-      updateFirebaseConfig(parsed);
-      setShowSettingsModal(false);
-    } catch (err) {
-      console.error(err);
-      setConfigError('صيغة الكود غير صحيحة! يرجى إدخال كود JSON صالح.');
-    }
-  };
-
-  const handleDisconnect = () => {
-    updateFirebaseConfig(null);
-    setRawConfig('');
-    setShowSettingsModal(false);
-  };
+  // Config handlers removed (integrated directly in environment variables)
 
   // Get only critical pending tasks for the dashboard overview
   const criticalPendingTasks = tasks.filter(t => t.isCritical && t.status === 'pending');
@@ -235,7 +205,7 @@ function Dashboard() {
 
           <button 
             className="btn btn-secondary" 
-            onClick={logoutUser}
+            onClick={handleLogout}
             style={{ 
               width: '100%', 
               padding: '8px 12px', 
@@ -275,14 +245,6 @@ function Dashboard() {
             <span style={{ fontSize: '11px', color: 'rgba(245, 240, 235, 0.4)', direction: 'ltr' }}>
               {isCloudActive ? "سحابي 🟢" : "محلي 🔴"} | v1.3.0
             </span>
-            <button 
-              className="btn btn-secondary" 
-              onClick={() => setShowSettingsModal(true)}
-              style={{ padding: '6px', borderRadius: '50%', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }} 
-              title="إعدادات الاتصال السحابي"
-            >
-              <Settings size={16} style={{ color: 'rgba(245, 240, 235, 0.7)' }} />
-            </button>
           </div>
         </header>
 
@@ -292,87 +254,6 @@ function Dashboard() {
         </main>
       </div>
 
-      {/* Settings Modal */}
-      {showSettingsModal && (
-        <div className="modal-overlay">
-          <div className="modal-content glass-panel animate-slide-in" style={{ maxWidth: '480px' }}>
-            <div className="modal-header">
-              <h3>إعدادات الربط السحابي (Firebase)</h3>
-              <button 
-                onClick={() => setShowSettingsModal(false)} 
-                className="btn-danger-text"
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <span className="badge" style={{ 
-                backgroundColor: isCloudActive ? 'var(--color-success-bg)' : 'var(--color-critical-bg)', 
-                color: isCloudActive ? 'var(--color-success)' : 'var(--color-critical)',
-                border: '1px solid rgba(255,255,255,0.05)',
-                marginBottom: '10px'
-              }}>
-                {isCloudActive ? 'حالة النظام: متصل بقاعدة Firestore 🟢' : 'حالة النظام: تخزين محلي محدود 🔴'}
-              </span>
-              <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.6)', lineHeight: '1.6' }}>
-                الصق كود تكوين الـ Web SDK الخاص بـ Firebase (Firestore) بالأسفل لتفعيل تخزين ومزامنة البيانات بالوقت الفعلي بين كافة الأجهزة فوراً.
-              </p>
-            </div>
-
-            <form onSubmit={handleSaveConfig}>
-              <div className="form-group">
-                <label>كود التكوين (JSON Config Object):</label>
-                <textarea
-                  value={rawConfig}
-                  onChange={(e) => setRawConfig(e.target.value)}
-                  placeholder={`{
-  "apiKey": "AIzaSy...",
-  "authDomain": "alhan-daily-tasks.firebaseapp.com",
-  "projectId": "alhan-daily-tasks",
-  "storageBucket": "alhan-daily-tasks.appspot.com",
-  "messagingSenderId": "...",
-  "appId": "..."
-}`}
-                  className="form-textarea"
-                  style={{ fontFamily: 'var(--font-family-en)', fontSize: '12px', minHeight: '150px', direction: 'ltr', textAlign: 'left' }}
-                  required
-                />
-              </div>
-
-              {configError && (
-                <div style={{ color: 'var(--color-critical)', fontSize: '12px', fontWeight: 600, marginBottom: '12px' }}>
-                  ⚠️ {configError}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '20px' }}>
-                {isCloudActive && (
-                  <button 
-                    type="button" 
-                    className="btn btn-secondary" 
-                    onClick={handleDisconnect}
-                    style={{ color: 'var(--color-critical)', borderColor: 'rgba(244,63,94,0.2)' }}
-                  >
-                    إلغاء الربط السحابي
-                  </button>
-                )}
-                <button 
-                  type="button" 
-                  className="btn btn-secondary" 
-                  onClick={() => setShowSettingsModal(false)}
-                >
-                  إلغاء
-                </button>
-                <button type="submit" className="btn btn-primary">
-                  حفظ وتفعيل الربط
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
