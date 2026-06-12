@@ -9,6 +9,7 @@ export default function TeamManagement() {
   const [role, setRole] = useState('staff');
   const [avatar, setAvatar] = useState('☕');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('123');
 
   const avatarOptions = ['☕', '☀️', '🌙', '📦', '🧁', '💳', '🛠️', '👨‍🍳', '👩‍💼', '📈', '🍩'];
 
@@ -16,12 +17,13 @@ export default function TeamManagement() {
     e.preventDefault();
     if (!name.trim()) return;
 
-    addUser({ name, role, avatar, email });
+    addUser({ name, role, avatar, email, password });
 
     setName('');
     setRole('staff');
     setAvatar('☕');
     setEmail('');
+    setPassword('123');
     setShowForm(false);
   };
 
@@ -107,7 +109,7 @@ export default function TeamManagement() {
               </select>
             </div>
 
-            <div className="form-group" style={{ gridColumn: 'span 2' }}>
+            <div className="form-group">
               <label>البريد الإلكتروني (اختياري):</label>
               <input 
                 type="email" 
@@ -115,6 +117,18 @@ export default function TeamManagement() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="yihya@alhan.com" 
                 className="form-input"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>كلمة مرور الحساب:</label>
+              <input 
+                type="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="تعيين كلمة مرور..." 
+                className="form-input"
+                required
               />
             </div>
 

@@ -3,12 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 const AppContext = createContext();
 
 const INITIAL_USERS = [
-  { id: 'owner_1', name: 'أ. أحمد (صاحب الكافيه)', role: 'owner', avatar: '👑', email: 'owner@alhan.com' },
-  { id: 'manager_morning', name: 'خالد (مدير الصباح)', role: 'manager', avatar: '☀️', email: 'khaled.m@alhan.com' },
-  { id: 'manager_evening', name: 'سارة (مديرة المساء)', role: 'manager', avatar: '🌙', email: 'sara.e@alhan.com' },
-  { id: 'manager_inventory', name: 'عمر (مدير المخزون والطلبات)', role: 'manager', avatar: '📦', email: 'omar.i@alhan.com' },
-  { id: 'staff_barista', name: 'يوسف (صانع القهوة - الباريستا)', role: 'staff', avatar: '☕', email: 'yousef.b@alhan.com' },
-  { id: 'staff_cashier', name: 'لينا (الكاشير والمحاسبة)', role: 'staff', avatar: '💳', email: 'lina.c@alhan.com' }
+  { id: 'owner_1', name: 'أ. أحمد (صاحب الكافيه)', role: 'owner', avatar: '👑', email: 'owner@alhan.com', password: '123' },
+  { id: 'manager_morning', name: 'خالد (مدير الصباح)', role: 'manager', avatar: '☀️', email: 'khaled@alhan.com', password: '123' },
+  { id: 'manager_evening', name: 'sara', role: 'manager', avatar: '🌙', email: 'sara@alhan.com', password: '123' },
+  { id: 'manager_inventory', name: 'عمر (مدير المخزون)', role: 'manager', avatar: '📦', email: 'omar@alhan.com', password: '123' },
+  { id: 'staff_barista', name: 'يوسف (الباريستا)', role: 'staff', avatar: '☕', email: 'yousef@alhan.com', password: '123' },
+  { id: 'staff_cashier', name: 'لينا (الكاشير)', role: 'staff', avatar: '💳', email: 'lina@alhan.com', password: '123' }
 ];
 
 const INITIAL_TASKS = [
@@ -22,7 +22,7 @@ const INITIAL_TASKS = [
     status: 'completed',
     isCritical: true,
     dueTime: '07:30',
-    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(), // 2 hours ago
+    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
     completedAt: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
     completedBy: 'staff_barista'
   },
@@ -36,7 +36,7 @@ const INITIAL_TASKS = [
     status: 'pending',
     isCritical: true,
     dueTime: '12:00',
-    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(), // 3 hours ago
+    createdAt: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
     completedAt: null,
     completedBy: null
   },
@@ -50,7 +50,7 @@ const INITIAL_TASKS = [
     status: 'pending',
     isCritical: true,
     dueTime: '23:30',
-    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(), // 10 mins ago
+    createdAt: new Date(Date.now() - 1000 * 60 * 10).toISOString(),
     completedAt: null,
     completedBy: null
   },
@@ -91,7 +91,7 @@ const INITIAL_ACTIVITIES = [
     id: 'act_3',
     timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
     userId: 'staff_barista',
-    userName: 'يوسف (صانع القهوة - الباريستا)',
+    userName: 'يوسف (الباريستا)',
     action: 'complete_task',
     details: 'أنجز المهمة الحرجة: "معايرة مطحنة القهوة الصباحية".'
   }
@@ -115,8 +115,7 @@ export const AppProvider = ({ children }) => {
 
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('alhan_current_user');
-    // Default to owner on first load
-    return saved ? JSON.parse(saved) : INITIAL_USERS[0];
+    return saved ? JSON.parse(saved) : null; // Defaults to null (not logged in)
   });
 
   // Persist states
@@ -133,28 +132,49 @@ export const AppProvider = ({ children }) => {
   }, [activities]);
 
   useEffect(() => {
-    localStorage.setItem('alhan_current_user', JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem('alhan_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('alhan_current_user');
+    }
   }, [currentUser]);
 
   // Log activity helper
-  const logActivity = (action, details, userId = currentUser.id, userName = currentUser.name) => {
+  const logActivity = (action, details, userId, userName) => {
+    const activeId = userId || (currentUser ? currentUser.id : 'system');
+    const activeName = userName || (currentUser ? currentUser.name : 'النظام');
+    
     const newActivity = {
       id: `act_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date().toISOString(),
-      userId,
-      userName,
+      userId: activeId,
+      userName: activeName,
       action,
       details
     };
-    setActivities(prev => [newActivity, ...prev].slice(0, 50)); // Keep last 50 activities
+    setActivities(prev => [newActivity, ...prev].slice(0, 50));
   };
 
-  // Switch Current User
-  const switchUser = (userId) => {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      setCurrentUser(user);
-      logActivity('switch_user', `قام بالتبديل إلى حساب: ${user.name}`, user.id, user.name);
+  // Login User
+  const loginUser = (email, password) => {
+    const foundUser = users.find(
+      u => u.email.toLowerCase().trim() === email.toLowerCase().trim() && u.password === password
+    );
+    
+    if (foundUser) {
+      setCurrentUser(foundUser);
+      logActivity('login_user', `سجل الدخول للنظام.`, foundUser.id, foundUser.name);
+      return { success: true };
+    }
+    
+    return { success: false, error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة!' };
+  };
+
+  // Logout User
+  const logoutUser = () => {
+    if (currentUser) {
+      logActivity('logout_user', `سجل خروجه من النظام.`, currentUser.id, currentUser.name);
+      setCurrentUser(null);
     }
   };
 
@@ -216,16 +236,18 @@ export const AppProvider = ({ children }) => {
   };
 
   // Add new User (Manager or Staff)
-  const addUser = ({ name, role, avatar, email }) => {
+  const addUser = ({ name, role, avatar, email, password }) => {
+    const defaultEmail = `${name.replace(/\s+/g, '.').toLowerCase()}@alhan.com`;
     const newUser = {
       id: `user_${Date.now()}`,
       name,
       role,
       avatar,
-      email: email || `${name.replace(/\s+/g, '.').toLowerCase()}@alhan.com`
+      email: email || defaultEmail,
+      password: password || '123' // Default password is 123
     };
     setUsers(prev => [...prev, newUser]);
-    logActivity('add_user', `أضاف مستخدماً جديداً بصلاحية ${role === 'manager' ? 'مدير' : 'موظف'}: "${name}".`);
+    logActivity('add_user', `أضاف عضواً جديداً بصلاحية ${role === 'manager' ? 'مدير' : 'موظف'}: "${name}".`);
     return newUser;
   };
 
@@ -236,7 +258,8 @@ export const AppProvider = ({ children }) => {
         tasks,
         activities,
         currentUser,
-        switchUser,
+        loginUser,
+        logoutUser,
         addTask,
         toggleTaskStatus,
         deleteTask,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
-import UserSelector from './components/UserSelector';
+import Login from './components/Login';
 import DashboardStats from './components/DashboardStats';
 import TaskForm from './components/TaskForm';
 import TaskList from './components/TaskList';
@@ -15,12 +15,13 @@ import {
   Coffee, 
   AlertTriangle, 
   ArrowRight,
-  TrendingUp
+  Settings,
+  LogOut
 } from 'lucide-react';
 
-function AppContent() {
+function Dashboard() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { currentUser, tasks } = useApp();
+  const { currentUser, logoutUser, tasks } = useApp();
 
   const getRoleLabel = (role) => {
     switch (role) {
@@ -166,25 +167,60 @@ function AppContent() {
           </nav>
         </div>
 
-        {/* User Card in Footer */}
+        {/* User Card & Logout in Footer */}
         <div className="sidebar-footer">
-          <div className="sidebar-user-card">
+          <div className="sidebar-user-card" style={{ marginBottom: '12px' }}>
             <div className="sidebar-user-avatar">{currentUser.avatar}</div>
             <div className="sidebar-user-info">
               <span className="sidebar-user-name">{currentUser.name}</span>
               <span className="sidebar-user-role">{getRoleLabel(currentUser.role)}</span>
             </div>
           </div>
+
+          <button 
+            className="btn btn-secondary" 
+            onClick={logoutUser}
+            style={{ 
+              width: '100%', 
+              padding: '8px 12px', 
+              fontSize: '12px', 
+              display: 'flex', 
+              justifyContent: 'center', 
+              alignItems: 'center', 
+              gap: '8px', 
+              color: 'var(--color-critical)', 
+              borderColor: 'rgba(244,63,94,0.15)', 
+              background: 'rgba(244,63,94,0.02)' 
+            }}
+          >
+            <LogOut size={14} />
+            تسجيل الخروج
+          </button>
         </div>
       </aside>
 
       {/* 2. Main Content Area */}
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
         
-        {/* User Switcher Banner always available at the top */}
-        <div style={{ padding: '24px 32px 0 32px' }}>
-          <UserSelector />
-        </div>
+        {/* Simple Top Bar (No simulator switcher, just clean stats header) */}
+        <header className="glass-panel" style={{ 
+          margin: '24px 32px 0 32px', 
+          padding: '12px 24px', 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center' 
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '18px' }}>☕</span>
+            <span style={{ fontWeight: 700, fontSize: '14px' }}>فرع الكافيه الرئيسي | الإدارة النشطة</span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '11px', color: 'rgba(245, 240, 235, 0.4)', direction: 'ltr' }}>
+              v1.2.0 (Security Login Active)
+            </span>
+          </div>
+        </header>
 
         {/* Dynamic Render Page View */}
         <main className="main-content">
@@ -193,6 +229,17 @@ function AppContent() {
       </div>
     </div>
   );
+}
+
+function AppContent() {
+  const { currentUser } = useApp();
+
+  // If no user is logged in, show the Login screen
+  if (!currentUser) {
+    return <Login />;
+  }
+
+  return <Dashboard />;
 }
 
 function App() {
