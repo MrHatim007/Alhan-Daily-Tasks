@@ -251,6 +251,15 @@ export const AppProvider = ({ children }) => {
     return newUser;
   };
 
+  // Delete User
+  const deleteUser = (userId) => {
+    const userToDelete = users.find(u => u.id === userId);
+    if (userToDelete) {
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      logActivity('delete_user', `قام بحذف العضو: "${userToDelete.name}" من نظام فريق العمل.`);
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -264,6 +273,7 @@ export const AppProvider = ({ children }) => {
         toggleTaskStatus,
         deleteTask,
         addUser,
+        deleteUser,
         logActivity
       }}
     >

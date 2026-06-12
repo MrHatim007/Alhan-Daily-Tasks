@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Users, UserPlus, Mail, CheckCircle2, ClipboardList, Shield, X, ShieldAlert } from 'lucide-react';
+import { Users, UserPlus, Mail, CheckCircle2, ClipboardList, Shield, X, ShieldAlert, Trash2, AlertTriangle } from 'lucide-react';
 
 export default function TeamManagement() {
-  const { users, tasks, currentUser, addUser } = useApp();
+  const { users, tasks, currentUser, addUser, deleteUser } = useApp();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [role, setRole] = useState('staff');
   const [avatar, setAvatar] = useState('☕');
   const [email, setEmail] = useState('');
+  const [confirmDeleteUser, setConfirmDeleteUser] = useState(null);
   const [password, setPassword] = useState('123');
 
   const avatarOptions = ['☕', '☀️', '🌙', '📦', '🧁', '💳', '🛠️', '👨‍🍳', '👩‍💼', '📈', '🍩'];
@@ -181,6 +182,26 @@ export default function TeamManagement() {
                 </span>
               )}
               
+              {currentUser.role === 'owner' && !isCurrentUser && (
+                <button
+                  onClick={() => setConfirmDeleteUser(user)}
+                  className="btn-danger-text"
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    left: '12px',
+                    border: 'none',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    borderRadius: '50%'
+                  }}
+                  title="حذف هذا العضو"
+                >
+                  <Trash2 size={15} />
+                </button>
+              )}
+              
               <div className="team-card-avatar">
                 {user.avatar}
               </div>
@@ -221,6 +242,62 @@ export default function TeamManagement() {
           );
         })}
       </div>
+
+      {/* Custom Confirmation Modal */}
+      {confirmDeleteUser && (
+        <div className="modal-overlay">
+          <div className="modal-content glass-panel animate-slide-in" style={{ borderColor: 'var(--color-critical)', maxWidth: '400px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: '16px' }}>
+              <div style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--color-critical-bg)',
+                color: 'var(--color-critical)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }} className="pulse-critical-badge">
+                <AlertTriangle size={24} />
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: '16px', color: '#fff' }}>تأكيد حذف عضو الفريق</h3>
+                <p style={{ fontSize: '13px', color: 'rgba(245,240,235,0.6)', marginTop: '8px', lineHeight: '1.6' }}>
+                  هل أنت متأكد من حذف العضو <strong>{confirmDeleteUser.name}</strong> نهائياً من نظام كافيه ألحان؟
+                  <br />
+                  <span style={{ color: 'var(--color-critical)', fontWeight: 600, fontSize: '12px' }}>تحذير: لا يمكن التراجع عن هذا الإجراء!</span>
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '8px' }}>
+                <button 
+                  className="btn btn-secondary" 
+                  onClick={() => setConfirmDeleteUser(null)}
+                  style={{ flex: 1 }}
+                >
+                  إلغاء
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => {
+                    deleteUser(confirmDeleteUser.id);
+                    setConfirmDeleteUser(null);
+                  }}
+                  style={{ 
+                    flex: 1, 
+                    background: 'linear-gradient(135deg, var(--color-critical) 0%, #c2185b 100%)', 
+                    color: '#fff', 
+                    boxShadow: '0 4px 15px rgba(244, 63, 94, 0.25)' 
+                  }}
+                >
+                  تأكيد الحذف
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
