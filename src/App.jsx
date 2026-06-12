@@ -114,10 +114,17 @@ function Dashboard() {
   const renderView = () => {
     switch (activeTab) {
       case 'dashboard': {
-        const leaderboard = users.map(user => {
-          const completedCount = tasks.filter(t => t.assignedTo === user.id && t.status === 'completed').length;
-          return { ...user, completedCount };
-        }).sort((a, b) => b.completedCount - a.completedCount);
+        const leaderboard = users
+          .filter(u => {
+            const uRole = roles.find(r => r.id === u.role);
+            const permission = uRole ? uRole.permission : u.role;
+            return permission !== 'owner';
+          })
+          .map(user => {
+            const completedCount = tasks.filter(t => t.assignedTo === user.id && t.status === 'completed').length;
+            return { ...user, completedCount };
+          })
+          .sort((a, b) => b.completedCount - a.completedCount);
 
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
@@ -130,7 +137,7 @@ function Dashboard() {
             </div>
 
             {/* Quick Metrics Cards */}
-            <DashboardStats setActiveTab={setActiveTab} />
+            <DashboardStats setActiveTab={setActiveTab} currentUserPermission={currentUserPermission} />
 
             {/* Sub-grid for critical tasks, leaderboard and recent logs */}
             <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', flexWrap: 'wrap' }} className="dashboard-grid">

@@ -1,22 +1,24 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { ClipboardList, CheckCircle2, AlertTriangle, Percent } from 'lucide-react';
+import { ClipboardList, CheckCircle2, AlertTriangle, Percent, Archive } from 'lucide-react';
 
-export default function DashboardStats({ setActiveTab }) {
+export default function DashboardStats({ setActiveTab, currentUserPermission }) {
   const { tasks } = useApp();
 
-  const total = tasks.length;
-  const completed = tasks.filter(t => t.status === 'completed').length;
+  const activeTasks = tasks.filter(t => !t.isArchived);
+  const total = activeTasks.length;
+  const completed = activeTasks.filter(t => t.status === 'completed').length;
   const pending = total - completed;
-  const criticalPending = tasks.filter(t => t.isCritical && t.status === 'pending').length;
+  const criticalPending = activeTasks.filter(t => t.isCritical && t.status === 'pending').length;
+  const archivedCount = tasks.filter(t => t.isArchived).length;
   
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  const handleCardClick = (status, critical) => {
+  const handleCardClick = (status, critical, targetTab = 'tasks') => {
     localStorage.setItem('alhan_filter_status', status);
     localStorage.setItem('alhan_filter_critical', critical);
     if (setActiveTab) {
-      setActiveTab('tasks');
+      setActiveTab(targetTab);
     }
   };
 
@@ -105,6 +107,23 @@ export default function DashboardStats({ setActiveTab }) {
           />
         </div>
       </div>
+
+      {/* Archived Tasks Card (Owner Only) */}
+      {currentUserPermission === 'owner' && (
+        <div 
+          className="glass-panel stat-card clickable-card" 
+          onClick={() => handleCardClick('all', 'all', 'archive')}
+          style={{ cursor: 'pointer', border: '1px solid rgba(223, 183, 108, 0.25)' }}
+        >
+          <div className="stat-icon" style={{ backgroundColor: 'rgba(223, 183, 108, 0.08)', color: 'var(--gold-primary)' }}>
+            <Archive size={24} />
+          </div>
+          <div className="stat-info">
+            <span className="stat-value" style={{ color: 'var(--gold-primary)' }}>{archivedCount}</span>
+            <span className="stat-label">أرشيف المهام المكتملة</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

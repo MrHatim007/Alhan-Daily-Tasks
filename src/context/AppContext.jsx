@@ -294,9 +294,12 @@ export const AppProvider = ({ children }) => {
     // 7. Sync General System Settings (Logo)
     const unsubConfig = onSnapshot(doc(db, "config", "general"), (docSnap) => {
       if (docSnap.exists()) {
-        setSystemLogo(docSnap.data().logo || '');
+        const logoUrl = docSnap.data().logo || '';
+        setSystemLogo(logoUrl);
+        localStorage.setItem('alhan_system_logo', logoUrl);
       } else {
         setSystemLogo('');
+        localStorage.setItem('alhan_system_logo', '');
       }
       configLoaded = true;
       checkLoadingComplete();

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Sliders, Plus, Trash2, Check, Tag, Shield, AlertTriangle, Image, Pencil, Sparkles } from 'lucide-react';
+import { Sliders, Plus, Trash2, Check, Tag, Shield, AlertTriangle, Image, Pencil } from 'lucide-react';
 
 export default function Settings() {
   const { 
@@ -14,30 +14,6 @@ export default function Settings() {
   const [activeSubTab, setActiveSubTab] = useState('categories');
   const [logoUrlInput, setLogoUrlInput] = useState('');
 
-  const handleSeedDemoData = async () => {
-    if (!window.confirm('هل أنت متأكد من رغبتك في توليد البيانات التجريبية؟ سيتم إضافة خيارات نموذجية للتصنيفات ومستويات الأهمية والأدوار الوظيفية.')) {
-      return;
-    }
-    
-    try {
-      // 1. Seed Categories
-      await addCategory({ label: 'تحضير القهوة والاسبريسو (تجربة)', emoji: '☕' });
-      await addCategory({ label: 'نظافة الصالة والطاولات (تجربة)', emoji: '🧹' });
-
-      // 2. Seed Priorities
-      await addPriority({ label: 'طارئ ولا يمكن التأجيل (تجربة) 🚨', color: '#f43f5e' });
-      await addPriority({ label: 'مهم خلال اليوم (تجربة) ⚠️', color: '#f59e0b' });
-
-      // 3. Seed Roles
-      await addRole({ label: 'باريستا محترف (تجربة)', permission: 'staff' });
-      await addRole({ label: 'مشرف جودة الصالة (تجربة)', permission: 'manager' });
-
-      alert('تم توليد البيانات التجريبية بنجاح! يمكنك الآن رؤيتها والتحكم بها (تعديل/حذف) من الجداول أدناه.');
-    } catch (err) {
-      console.error('Error seeding demo data:', err);
-      alert('حدث خطأ أثناء محاولة توليد البيانات التجريبية. يرجى المحاولة مرة أخرى.');
-    }
-  };
 
   // Editing state variables
   const [editingCategory, setEditingCategory] = useState(null);
@@ -175,43 +151,6 @@ export default function Settings() {
         </p>
       </div>
 
-      {/* Demo Data Seeding Panel */}
-      <div className="glass-panel" style={{ 
-        padding: '20px', 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        gap: '20px', 
-        flexWrap: 'wrap',
-        borderColor: 'rgba(223, 183, 108, 0.25)',
-        background: 'linear-gradient(135deg, rgba(223, 183, 108, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%)'
-      }}>
-        <div style={{ flex: '1 1 500px' }}>
-          <h4 style={{ fontSize: '14px', color: 'var(--gold-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-            <Sparkles size={16} />
-            توليد بيانات تجريبية نموذجية للنظام
-          </h4>
-          <p style={{ fontSize: '12px', color: 'rgba(245,240,235,0.7)', lineHeight: '1.6' }}>
-            هل تريد تشغيل النظام وتجربته بسرعة؟ اضغط هنا لإنشاء تصنيفات مهام افتراضية (كتحضير القهوة ونظافة الصالة)، ومستويات أهمية (كالحرجة)، وأدوار وظيفية تجريبية (كالباريستا). يمكنك تعديل أو حذف أي منها بحرية لاحقاً.
-          </p>
-        </div>
-        <button 
-          onClick={handleSeedDemoData} 
-          className="btn btn-primary"
-          style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px',
-            padding: '10px 16px',
-            fontSize: '12.5px',
-            fontWeight: 700
-          }}
-          type="button"
-        >
-          <Sparkles size={14} />
-          توليد البيانات التجريبية
-        </button>
-      </div>
 
       {/* Sub tabs nav */}
       <div className="filter-tabs" style={{ alignSelf: 'flex-start' }}>
