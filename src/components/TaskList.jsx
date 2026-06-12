@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Check, Trash2, Clock, User, AlertTriangle, Search, Filter, Tag, CheckSquare, Coffee, Sparkles, Package, CreditCard, Lock, HelpCircle } from 'lucide-react';
+import { Check, Trash2, Clock, User, AlertTriangle, Search, Filter, Tag, CheckSquare, Coffee, Sparkles, Package, CreditCard, Lock, HelpCircle, Archive } from 'lucide-react';
 
 export default function TaskList() {
-  const { tasks, users, currentUser, toggleTaskStatus, deleteTask } = useApp();
+  const { tasks, users, currentUser, toggleTaskStatus, deleteTask, archiveTask } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, pending, completed
   const [criticalFilter, setCriticalFilter] = useState('all'); // all, critical
@@ -40,6 +40,7 @@ export default function TaskList() {
 
   // Filter logic
   const filteredTasks = tasks.filter(task => {
+    if (task.isArchived) return false;
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
     
@@ -227,17 +228,29 @@ export default function TaskList() {
                     )}
                   </div>
 
-                  {/* Delete Button */}
-                  {canDeleteTask(task) && (
-                    <button 
-                      onClick={() => deleteTask(task.id)}
-                      className="btn-danger-text"
-                      title="حذف المهمة"
-                      style={{ border: 'none', background: 'transparent', cursor: 'pointer' }}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
+                  {/* Actions Group */}
+                  <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                    {currentUser.role === 'owner' && task.status === 'completed' && (
+                      <button 
+                        onClick={() => archiveTask(task.id)}
+                        title="أرشفة المهمة"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', color: 'var(--gold-primary)', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Archive size={16} />
+                      </button>
+                    )}
+                    
+                    {canDeleteTask(task) && (
+                      <button 
+                        onClick={() => deleteTask(task.id)}
+                        className="btn-danger-text"
+                        title="حذف المهمة"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', display: 'flex', alignItems: 'center' }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <div className="task-card-footer">

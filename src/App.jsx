@@ -6,6 +6,7 @@ import TaskForm from './components/TaskForm';
 import TaskList from './components/TaskList';
 import ActivityLog from './components/ActivityLog';
 import TeamManagement from './components/TeamManagement';
+import ArchiveList from './components/ArchiveList';
 import { 
   LayoutDashboard, 
   CheckSquare, 
@@ -16,7 +17,8 @@ import {
   AlertTriangle, 
   ArrowRight,
   Settings,
-  LogOut
+  LogOut,
+  Archive
 } from 'lucide-react';
 
 function Dashboard() {
@@ -100,6 +102,8 @@ function Dashboard() {
         return <TeamManagement />;
       case 'logs':
         return <ActivityLog />;
+      case 'archive':
+        return <ArchiveList />;
       default:
         return <div>التبويب غير متوفر</div>;
     }
@@ -164,6 +168,16 @@ function Dashboard() {
               <History size={18} />
               <span>سجل النشاطات</span>
             </button>
+
+            {currentUser.role === 'owner' && (
+              <button 
+                className={`sidebar-link ${activeTab === 'archive' ? 'active' : ''}`}
+                onClick={() => setActiveTab('archive')}
+              >
+                <Archive size={18} />
+                <span>أرشيف المهام</span>
+              </button>
+            )}
           </nav>
         </div>
 

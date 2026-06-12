@@ -235,6 +235,32 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  // Archive Task
+  const archiveTask = (taskId) => {
+    setTasks(prev =>
+      prev.map(task => {
+        if (task.id === taskId) {
+          logActivity('archive_task', `قام بأرشفة المهمة المكتملة: "${task.title}".`);
+          return { ...task, isArchived: true };
+        }
+        return task;
+      })
+    );
+  };
+
+  // Unarchive Task
+  const unarchiveTask = (taskId) => {
+    setTasks(prev =>
+      prev.map(task => {
+        if (task.id === taskId) {
+          logActivity('unarchive_task', `أعاد استعادة المهمة المؤرشفة: "${task.title}".`);
+          return { ...task, isArchived: false };
+        }
+        return task;
+      })
+    );
+  };
+
   // Add new User (Manager or Staff)
   const addUser = ({ name, role, avatar, email, password }) => {
     const defaultEmail = `${name.replace(/\s+/g, '.').toLowerCase()}@alhan.com`;
@@ -272,6 +298,8 @@ export const AppProvider = ({ children }) => {
         addTask,
         toggleTaskStatus,
         deleteTask,
+        archiveTask,
+        unarchiveTask,
         addUser,
         deleteUser,
         logActivity
