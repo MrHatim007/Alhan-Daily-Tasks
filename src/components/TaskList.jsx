@@ -13,8 +13,22 @@ export default function TaskList() {
   const userPermission = currentUserRole ? currentUserRole.permission : currentUser.role;
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, pending, completed
-  const [criticalFilter, setCriticalFilter] = useState('all'); // all, critical
+  const [statusFilter, setStatusFilter] = useState(() => {
+    const saved = localStorage.getItem('alhan_filter_status');
+    if (saved) {
+      localStorage.removeItem('alhan_filter_status');
+      return saved;
+    }
+    return 'all';
+  });
+  const [criticalFilter, setCriticalFilter] = useState(() => {
+    const saved = localStorage.getItem('alhan_filter_critical');
+    if (saved) {
+      localStorage.removeItem('alhan_filter_critical');
+      return saved;
+    }
+    return 'all';
+  });
   const [categoryFilter, setCategoryFilter] = useState('all'); // all, preparations, cleaning, etc.
   const [taskToDelete, setTaskToDelete] = useState(null);
   const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
@@ -41,6 +55,15 @@ export default function TaskList() {
   const formatDueDateTime = (dueDateTimeStr, dueTimeStr) => {
     if (dueDateTimeStr) {
       try {
+        if (dueDateTimeStr.length === 10) {
+          const [year, month, day] = dueDateTimeStr.split('-').map(Number);
+          const localDate = new Date(year, month - 1, day);
+          return localDate.toLocaleDateString('ar-EG', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+          });
+        }
         const date = new Date(dueDateTimeStr);
         return date.toLocaleDateString('ar-EG', {
           weekday: 'long',
@@ -63,6 +86,12 @@ export default function TaskList() {
   // Filter logic
   const filteredTasks = tasks.filter(task => {
     if (task.isArchived) return false;
+
+    // Privacy restriction: staff can only see their own tasks
+    if (userPermission === 'staff' && task.assignedTo !== currentUser.id) {
+      return false;
+    }
+
     const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (task.description && task.description.toLowerCase().includes(searchTerm.toLowerCase()));
     
@@ -201,36 +230,27 @@ export default function TaskList() {
               </select>
             </div>
 
-            {/* Assignee Filter */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <User size={14} style={{ color: 'var(--gold-primary)' }} />
-              <select 
-                value={assigneeFilter} 
-                onChange={(e) => setAssigneeFilter(e.target.value)}
-                className="form-select"
-                style={{ padding: '6px 12px', fontSize: '12px', width: 'auto', minWidth: '150px' }}
-              >
-                <option value="all">كل الموظفين والمديرين</option>
-                {users.map(u => {
-                  const uRole = roles.find(r => r.id === u.role) || { label: u.role };
-                  return (
-                    <option key={u.id} value={u.id}>
-                      {u.avatar} {u.name} ({uRole.label})
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            {/* My Tasks Quick Filter for Staff */}
-            {userPermission === 'staff' && assigneeFilter !== currentUser.id && (
-              <button 
-                className="btn btn-secondary"
-                onClick={() => setAssigneeFilter(currentUser.id)}
-                style={{ padding: '6px 12px', fontSize: '12px', borderRadius: 'var(--border-radius-sm)' }}
-              >
-                عرض مهامي فقط 🔍
-              </button>
+            {/* Assignee Filter (Hidden for Staff) */}
+            {userPermission !== 'staff' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <User size={14} style={{ color: 'var(--gold-primary)' }} />
+                <select 
+                  value={assigneeFilter} 
+                  onChange={(e) => setAssigneeFilter(e.target.value)}
+                  className="form-select"
+                  style={{ padding: '6px 12px', fontSize: '12px', width: 'auto', minWidth: '150px' }}
+                >
+                  <option value="all">كل الموظفين والمديرين</option>
+                  {users.map(u => {
+                    const uRole = roles.find(r => r.id === u.role) || { label: u.role };
+                    return (
+                      <option key={u.id} value={u.id}>
+                        {u.avatar} {u.name} ({uRole.label})
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
             )}
           </div>
         </div>

@@ -34,6 +34,15 @@ export default function ArchiveList() {
   const formatDueDateTime = (dueDateTimeStr, dueTimeStr) => {
     if (dueDateTimeStr) {
       try {
+        if (dueDateTimeStr.length === 10) {
+          const [year, month, day] = dueDateTimeStr.split('-').map(Number);
+          const localDate = new Date(year, month - 1, day);
+          return localDate.toLocaleDateString('ar-EG', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long'
+          });
+        }
         const date = new Date(dueDateTimeStr);
         return date.toLocaleDateString('ar-EG', {
           weekday: 'long',

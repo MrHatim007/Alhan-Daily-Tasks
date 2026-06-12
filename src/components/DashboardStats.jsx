@@ -2,7 +2,7 @@ import React from 'react';
 import { useApp } from '../context/AppContext';
 import { ClipboardList, CheckCircle2, AlertTriangle, Percent } from 'lucide-react';
 
-export default function DashboardStats() {
+export default function DashboardStats({ setActiveTab }) {
   const { tasks } = useApp();
 
   const total = tasks.length;
@@ -12,10 +12,22 @@ export default function DashboardStats() {
   
   const completionRate = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+  const handleCardClick = (status, critical) => {
+    localStorage.setItem('alhan_filter_status', status);
+    localStorage.setItem('alhan_filter_critical', critical);
+    if (setActiveTab) {
+      setActiveTab('tasks');
+    }
+  };
+
   return (
     <div className="stats-cards-container">
       {/* Total Tasks Card */}
-      <div className="glass-panel stat-card">
+      <div 
+        className="glass-panel stat-card clickable-card" 
+        onClick={() => handleCardClick('all', 'all')}
+        style={{ cursor: 'pointer' }}
+      >
         <div className="stat-icon" style={{ backgroundColor: 'var(--gold-dim)', color: 'var(--gold-primary)' }}>
           <ClipboardList size={24} />
         </div>
@@ -26,7 +38,11 @@ export default function DashboardStats() {
       </div>
 
       {/* Completed Tasks Card */}
-      <div className="glass-panel stat-card">
+      <div 
+        className="glass-panel stat-card clickable-card" 
+        onClick={() => handleCardClick('completed', 'all')}
+        style={{ cursor: 'pointer' }}
+      >
         <div className="stat-icon" style={{ backgroundColor: 'var(--color-success-bg)', color: 'var(--color-success)' }}>
           <CheckCircle2 size={24} />
         </div>
@@ -37,11 +53,15 @@ export default function DashboardStats() {
       </div>
 
       {/* Critical Pending Tasks Card */}
-      <div className={`glass-panel stat-card ${criticalPending > 0 ? 'pulse-critical-badge' : ''}`} 
-           style={{ 
-             border: criticalPending > 0 ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid var(--glass-border)',
-             backgroundColor: criticalPending > 0 ? 'rgba(244, 63, 94, 0.08)' : 'var(--glass-bg)'
-           }}>
+      <div 
+        className={`glass-panel stat-card clickable-card ${criticalPending > 0 ? 'pulse-critical-badge' : ''}`} 
+        onClick={() => handleCardClick('pending', 'urgent')}
+        style={{ 
+          border: criticalPending > 0 ? '1px solid rgba(244, 63, 94, 0.3)' : '1px solid var(--glass-border)',
+          backgroundColor: criticalPending > 0 ? 'rgba(244, 63, 94, 0.08)' : 'var(--glass-bg)',
+          cursor: 'pointer'
+        }}
+      >
         <div className="stat-icon" style={{ 
           backgroundColor: criticalPending > 0 ? 'var(--color-critical-bg)' : 'rgba(255,255,255,0.03)', 
           color: criticalPending > 0 ? 'var(--color-critical)' : 'rgba(255,255,255,0.4)' 
@@ -57,7 +77,11 @@ export default function DashboardStats() {
       </div>
 
       {/* Completion Rate Card */}
-      <div className="glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
+      <div 
+        className="glass-panel stat-card clickable-card" 
+        onClick={() => handleCardClick('completed', 'all')}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: '10px', cursor: 'pointer' }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
           <div className="stat-icon" style={{ backgroundColor: 'var(--color-info-bg)', color: 'var(--color-info)' }}>
             <Percent size={24} />

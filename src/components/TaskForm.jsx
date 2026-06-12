@@ -145,10 +145,10 @@ export default function TaskForm() {
 
           <div className="form-group">
             <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <Clock size={13} /> تاريخ ووقت التسليم المستهدف:
+              <Clock size={13} /> تاريخ التسليم المستهدف:
             </label>
             <input 
-              type="datetime-local" 
+              type="date" 
               value={dueDateTime} 
               onChange={(e) => setDueDateTime(e.target.value)}
               className="form-input"

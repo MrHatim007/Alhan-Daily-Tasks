@@ -424,7 +424,7 @@ export const AppProvider = ({ children }) => {
       dueDateTime: dueDateTime || null,
       // Fallback fields for backwards compatibility
       isCritical: isCritical || priority === 'urgent',
-      dueTime: dueTime || (dueDateTime ? dueDateTime.substring(11, 16) : '12:00'),
+      dueTime: dueTime || (dueDateTime && dueDateTime.length > 10 ? dueDateTime.substring(11, 16) : '12:00'),
       isArchived: false,
       createdAt: new Date().toISOString(),
       completedAt: null,

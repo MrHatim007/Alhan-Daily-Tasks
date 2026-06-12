@@ -939,6 +939,19 @@ body {
   gap: 16px;
 }
 
+/* Clickable Dashboard Stats Cards hover effect (all devices) */
+.clickable-card {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease !important;
+}
+.clickable-card:hover {
+  transform: translateY(-3px);
+  border-color: rgba(223, 183, 108, 0.45) !important;
+  box-shadow: 0 10px 30px rgba(223, 183, 108, 0.12) !important;
+}
+.clickable-card:active {
+  transform: translateY(-1px);
+}
+
 @media (max-width: 768px) {
   .desktop-only {
     display: none !important;
@@ -958,9 +971,10 @@ body {
 
   .main-content {
     padding: 16px;
-    height: calc(100vh - 128px); /* 60px top bar + 68px bottom nav */
+    height: calc(100vh - 132px); /* Adjusted for 60px top bar + 72px bottom nav */
     margin-top: 60px;
-    margin-bottom: 68px;
+    margin-bottom: 72px;
+    -webkit-overflow-scrolling: touch;
   }
 
   /* Swipable filter tabs & user pills on mobile */
@@ -995,6 +1009,101 @@ body {
     gap: 12px;
   }
 
+  /* Form Inputs (Mobile Zoom Prevention & Contrast Enhancement) */
+  .form-input, .form-select, .form-textarea {
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(223, 183, 108, 0.25) !important;
+    font-size: 16px !important; /* Prevents auto-zoom on iOS Safari */
+    padding: 12px 14px !important;
+    color: #fff !important;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--gold-primary) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    box-shadow: 0 0 10px rgba(223, 183, 108, 0.15) !important;
+  }
+  .form-group label {
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    color: rgba(255, 255, 255, 0.85) !important;
+    margin-bottom: 6px !important;
+  }
+
+  /* Compact 2x2 Grid for Metrics Cards on Mobile */
+  .stats-cards-container {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+  .stat-card {
+    padding: 12px 10px !important;
+    gap: 10px !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-direction: row !important;
+  }
+  .stat-icon {
+    width: 34px !important;
+    height: 34px !important;
+    border-radius: 8px !important;
+    font-size: 16px !important;
+    flex-shrink: 0 !important;
+  }
+  .stat-icon svg {
+    width: 16px !important;
+    height: 16px !important;
+  }
+  .stat-value {
+    font-size: 16px !important;
+    font-weight: 800 !important;
+  }
+  .stat-label {
+    font-size: 9px !important;
+    font-weight: 700 !important;
+    opacity: 0.8 !important;
+  }
+
+  /* Optimized Task Cards for Mobile */
+  .task-card {
+    padding: 14px 16px !important;
+    gap: 12px !important;
+    border-radius: var(--border-radius-md) !important;
+  }
+  .task-card-title {
+    font-size: 15px !important;
+    line-height: 1.4 !important;
+  }
+  .task-card-desc {
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    color: rgba(245, 240, 235, 0.7) !important;
+  }
+  .task-card-footer {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    padding-top: 10px !important;
+    margin-top: 2px !important;
+  }
+  .task-meta-group {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+  .task-meta-item {
+    font-size: 11px !important;
+    color: rgba(245, 240, 235, 0.65) !important;
+  }
+  .user-badge-tag {
+    background: rgba(223, 183, 108, 0.08) !important;
+    border: 1px solid rgba(223, 183, 108, 0.15) !important;
+    padding: 4px 8px !important;
+    border-radius: 6px !important;
+    width: fit-content !important;
+    font-size: 11px !important;
+  }
+
   /* Mobile Top Bar Styles */
   .mobile-top-bar {
     display: flex;
@@ -1005,13 +1114,13 @@ body {
     left: 0;
     right: 0;
     height: 60px;
-    background: rgba(15, 8, 6, 0.93);
+    background: linear-gradient(180deg, rgba(20, 12, 9, 0.97) 0%, rgba(10, 5, 4, 0.99) 100%);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border-bottom: 1px solid var(--glass-border);
+    border-bottom: 1.5px solid rgba(223, 183, 108, 0.25);
     padding: 0 16px;
     z-index: 100;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
   }
 
   /* Mobile Bottom Navigation Styles */
@@ -1023,15 +1132,15 @@ body {
     bottom: 0;
     left: 0;
     right: 0;
-    height: 68px;
-    background: rgba(10, 5, 4, 0.96);
+    height: 72px;
+    background: linear-gradient(0deg, rgba(10, 5, 4, 0.99) 0%, rgba(20, 12, 9, 0.97) 100%);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border-top: 1px solid var(--glass-border);
+    border-top: 1.5px solid rgba(223, 183, 108, 0.25);
     z-index: 100;
     border-radius: 20px 20px 0 0;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
-    padding: 4px 12px;
+    box-shadow: 0 -4px 25px rgba(0, 0, 0, 0.6);
+    padding: 4px 16px;
   }
 
   .mobile-nav-link {
@@ -1039,12 +1148,12 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 3px;
+    gap: 4px;
     color: rgba(245, 240, 235, 0.55);
     background: transparent;
     border: none;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 11px;
     font-family: var(--font-family-ar);
     font-weight: 600;
     flex: 1;
@@ -1058,6 +1167,7 @@ body {
 
   .mobile-nav-link.active {
     color: var(--gold-primary);
+    text-shadow: 0 0 10px rgba(223, 183, 108, 0.2);
   }
 
   /* Bottom Sheet for 'More' Menu */

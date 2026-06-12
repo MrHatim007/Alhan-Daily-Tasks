@@ -19,14 +19,15 @@ import {
   ArrowRight,
   LogOut,
   Archive,
-  Sliders
+  Sliders,
+  Trophy
 } from 'lucide-react';
 
 function Dashboard() {
   const [activeTab, setActiveTab] = useState(() => {
     return localStorage.getItem('alhan_active_tab') || 'dashboard';
   });
-  const { currentUser, logoutUser, tasks, isCloudActive, roles, systemLogo } = useApp();
+  const { currentUser, logoutUser, tasks, isCloudActive, roles, systemLogo, users } = useApp();
   const [showInactivityModal, setShowInactivityModal] = useState(false);
   const [inactivityCountdown, setInactivityCountdown] = useState(60);
   const [showMobileMore, setShowMobileMore] = useState(false);
@@ -112,7 +113,12 @@ function Dashboard() {
 
   const renderView = () => {
     switch (activeTab) {
-      case 'dashboard':
+      case 'dashboard': {
+        const leaderboard = users.map(user => {
+          const completedCount = tasks.filter(t => t.assignedTo === user.id && t.status === 'completed').length;
+          return { ...user, completedCount };
+        }).sort((a, b) => b.completedCount - a.completedCount);
+
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
             {/* Header Greeting */}
@@ -124,50 +130,106 @@ function Dashboard() {
             </div>
 
             {/* Quick Metrics Cards */}
-            <DashboardStats />
+            <DashboardStats setActiveTab={setActiveTab} />
 
-            {/* Sub-grid for critical tasks and recent log overview */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: '24px', flexWrap: 'wrap' }} className="dashboard-grid">
+            {/* Sub-grid for critical tasks, leaderboard and recent logs */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', flexWrap: 'wrap' }} className="dashboard-grid">
               
-              {/* Critical Alert Tasks Box */}
-              <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <h4 style={{ fontSize: '15px', color: 'var(--color-critical)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <AlertTriangle size={16} /> مهام عاجلة وحرجة تحتاج للتنفيذ فوراً ({criticalPendingTasks.length})
-                </h4>
-                
-                {criticalPendingTasks.length === 0 ? (
-                  <div style={{ padding: '40px 20px', textAlign: 'center', color: 'rgba(245,240,235,0.4)', fontSize: '13px' }}>
-                    🎉 رائع! لا توجد مهام حرجة معلقة حالياً. جميع الأعمال الأساسية تمت بكفاءة.
-                  </div>
-                ) : (
+              {/* Right column: critical tasks & leaderboard */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                {/* Critical Alert Tasks Box */}
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ fontSize: '15px', color: 'var(--color-critical)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <AlertTriangle size={16} /> مهام عاجلة وحرجة تحتاج للتنفيذ فوراً ({criticalPendingTasks.length})
+                  </h4>
+                  
+                  {criticalPendingTasks.length === 0 ? (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: 'rgba(245,240,235,0.4)', fontSize: '13px' }}>
+                      🎉 رائع! لا توجد مهام حرجة معلقة حالياً. جميع الأعمال الأساسية تمت بكفاءة.
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {criticalPendingTasks.map(task => (
+                        <div key={task.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRight: '3px solid var(--color-critical)' }}>
+                          <div>
+                            <strong style={{ fontSize: '14px', color: '#fff' }}>{task.title}</strong>
+                            <div style={{ fontSize: '11px', color: 'rgba(245,240,235,0.5)', marginTop: '4px' }}>
+                              وقت التسليم: {task.dueTime}
+                            </div>
+                          </div>
+                          <button 
+                            className="btn btn-secondary" 
+                            onClick={() => setActiveTab('tasks')}
+                            style={{ padding: '6px 12px', fontSize: '11px' }}
+                          >
+                            عرض وتأكيد <ArrowRight size={10} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Gamified Leaderboard */}
+                <div className="glass-panel" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h4 style={{ fontSize: '15px', color: 'var(--gold-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Trophy size={16} /> لوحة الصدارة ومستوى إنجاز المهام 🏆
+                  </h4>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {criticalPendingTasks.map(task => (
-                      <div key={task.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRight: '3px solid var(--color-critical)' }}>
-                        <div>
-                          <strong style={{ fontSize: '14px', color: '#fff' }}>{task.title}</strong>
-                          <div style={{ fontSize: '11px', color: 'rgba(245,240,235,0.5)', marginTop: '4px' }}>
-                            وقت التسليم: {task.dueTime}
+                    {leaderboard.slice(0, 5).map((u, index) => {
+                      const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '👏';
+                      const uRole = roles.find(r => r.id === u.role)?.label || 'موظف';
+                      return (
+                        <div 
+                          key={u.id} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            padding: '10px 14px', 
+                            borderRadius: 'var(--border-radius-md)', 
+                            background: index === 0 ? 'rgba(223, 183, 108, 0.06)' : 'rgba(255,255,255,0.01)', 
+                            border: index === 0 ? '1px solid rgba(223, 183, 108, 0.2)' : '1px solid transparent' 
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <span style={{ fontSize: '16px', fontWeight: 'bold', minWidth: '24px', textAlign: 'center' }}>{medal}</span>
+                            <span style={{ fontSize: '22px' }}>{u.avatar}</span>
+                            <div>
+                              <strong style={{ fontSize: '13px', color: '#fff', display: 'block' }}>{u.name}</strong>
+                              <span style={{ fontSize: '10px', color: 'rgba(245,240,235,0.4)' }}>{uRole}</span>
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'left' }}>
+                            <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--gold-primary)' }}>{u.completedCount}</span>
+                            <span style={{ fontSize: '10px', color: 'rgba(245,240,235,0.5)', marginRight: '4px' }}>منجزة</span>
                           </div>
                         </div>
-                        <button 
-                          className="btn btn-secondary" 
-                          onClick={() => setActiveTab('tasks')}
-                          style={{ padding: '6px 12px', fontSize: '11px' }}
-                        >
-                          عرض وتأكيد <ArrowRight size={10} />
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Quick Activity Log Box */}
-              <ActivityLog />
+              {/* Left column: Activity Log (Only for Owner) or Café Banner for employees */}
+              {currentUserPermission === 'owner' ? (
+                <ActivityLog />
+              ) : (
+                <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px', justifyContent: 'center', alignItems: 'center', textAlign: 'center', minHeight: '220px' }}>
+                  <Coffee size={36} style={{ color: 'var(--gold-primary)', opacity: 0.6 }} />
+                  <div>
+                    <h4 style={{ fontSize: '15px', color: '#fff', marginBottom: '6px' }}>كافيه ألحان يرحب بك!</h4>
+                    <p style={{ fontSize: '12px', color: 'rgba(245,240,235,0.5)', lineHeight: '1.6', maxWidth: '240px', margin: '0 auto' }}>
+                      راجع قائمة المهام اليومية المطلوبة منك وقم بإنجازها ليرتفع ترتيبك في لوحة صدارة الكافيه اليومية.
+                    </p>
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>
         );
+      }
       case 'tasks':
         return <TaskList />;
       case 'assign':
@@ -175,7 +237,7 @@ function Dashboard() {
       case 'team':
         return <TeamManagement />;
       case 'logs':
-        return <ActivityLog />;
+        return currentUserPermission === 'owner' ? <ActivityLog /> : <div className="glass-panel" style={{ padding: '24px', color: 'var(--color-critical)', textAlign: 'center' }}>عذراً، هذه الصفحة مخصصة لمالك الكافيه فقط!</div>;
       case 'archive':
         return <ArchiveList />;
       case 'settings':
@@ -288,13 +350,15 @@ function Dashboard() {
               <span>فريق العمل</span>
             </button>
 
-            <button 
-              className={`sidebar-link ${activeTab === 'logs' ? 'active' : ''}`}
-              onClick={() => setActiveTab('logs')}
-            >
-              <History size={18} />
-              <span>سجل النشاطات</span>
-            </button>
+            {currentUserPermission === 'owner' && (
+              <button 
+                className={`sidebar-link ${activeTab === 'logs' ? 'active' : ''}`}
+                onClick={() => setActiveTab('logs')}
+              >
+                <History size={18} />
+                <span>سجل النشاطات</span>
+              </button>
+            )}
 
             {currentUserPermission === 'owner' && (
               <button 
@@ -443,16 +507,18 @@ function Dashboard() {
               </div>
             )}
 
-            <div 
-              className={`bottom-sheet-menu-item ${activeTab === 'logs' ? 'active' : ''}`}
-              onClick={() => {
-                setActiveTab('logs');
-                setShowMobileMore(false);
-              }}
-            >
-              <History size={18} />
-              <span>سجل النشاطات العملياتية</span>
-            </div>
+            {currentUserPermission === 'owner' && (
+              <div 
+                className={`bottom-sheet-menu-item ${activeTab === 'logs' ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveTab('logs');
+                  setShowMobileMore(false);
+                }}
+              >
+                <History size={18} />
+                <span>سجل النشاطات العملياتية</span>
+              </div>
+            )}
 
             {currentUserPermission === 'owner' && (
               <div 
