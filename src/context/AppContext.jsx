@@ -362,44 +362,7 @@ export const AppProvider = ({ children }) => {
     }
   }, [currentUser]);
 
-  // Auto-seed demo items once when logged in
-  useEffect(() => {
-    if (!currentUser || loading) return;
 
-    const seedDemos = async () => {
-      // 1. Categories
-      const hasDemoCat1 = categories.some(c => c.label.includes('تحضير القهوة والاسبريسو'));
-      if (!hasDemoCat1 && categories.length > 0) {
-        await addCategory({ label: 'تحضير القهوة والاسبريسو (تجربة)', emoji: '☕' });
-      }
-      const hasDemoCat2 = categories.some(c => c.label.includes('نظافة الصالة والطاولات'));
-      if (!hasDemoCat2 && categories.length > 0) {
-        await addCategory({ label: 'نظافة الصالة والطاولات (تجربة)', emoji: '🧹' });
-      }
-
-      // 2. Priorities
-      const hasDemoPri1 = priorities.some(p => p.label.includes('طارئ ولا يمكن'));
-      if (!hasDemoPri1 && priorities.length > 0) {
-        await addPriority({ label: 'طارئ ولا يمكن التأجيل (تجربة)', color: '#f43f5e' });
-      }
-      const hasDemoPri2 = priorities.some(p => p.label.includes('مهم خلال اليوم'));
-      if (!hasDemoPri2 && priorities.length > 0) {
-        await addPriority({ label: 'مهم خلال اليوم (تجربة)', color: '#f59e0b' });
-      }
-
-      // 3. Roles
-      const hasDemoRole1 = roles.some(r => r.label.includes('باريستا محترف'));
-      if (!hasDemoRole1 && roles.length > 0) {
-        await addRole({ label: 'باريستا محترف (تجربة)', permission: 'staff' });
-      }
-      const hasDemoRole2 = roles.some(r => r.label.includes('مشرف جودة الصالة'));
-      if (!hasDemoRole2 && roles.length > 0) {
-        await addRole({ label: 'مشرف جودة الصالة (تجربة)', permission: 'manager' });
-      }
-    };
-
-    seedDemos();
-  }, [currentUser, loading, categories.length, priorities.length, roles.length]);
 
   // Log activity helper
   const logActivity = async (action, details, userId, userName) => {
@@ -482,7 +445,7 @@ export const AppProvider = ({ children }) => {
 
   // Category management
   const addCategory = async ({ label, emoji }) => {
-    const id = `cat_${Date.now()}`;
+    const id = `cat_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const newCat = { id, label, emoji };
     if (isCloudActive) {
       await setDoc(doc(db, "categories", id), newCat);
@@ -505,7 +468,7 @@ export const AppProvider = ({ children }) => {
 
   // Priority management
   const addPriority = async ({ label, color }) => {
-    const id = `pri_${Date.now()}`;
+    const id = `pri_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const newPri = { id, label, color };
     if (isCloudActive) {
       await setDoc(doc(db, "priorities", id), newPri);
@@ -528,7 +491,7 @@ export const AppProvider = ({ children }) => {
 
   // Role management
   const addRole = async ({ label, permission }) => {
-    const id = `role_${Date.now()}`;
+    const id = `role_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`;
     const newRole = { id, label, permission };
     if (isCloudActive) {
       await setDoc(doc(db, "roles", id), newRole);
