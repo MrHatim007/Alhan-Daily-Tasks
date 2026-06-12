@@ -1,18 +1,59 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Sliders, Plus, Trash2, Check, Tag, Shield, AlertTriangle, Image } from 'lucide-react';
+import { Sliders, Plus, Trash2, Check, Tag, Shield, AlertTriangle, Image, Pencil } from 'lucide-react';
 
 export default function Settings() {
   const { 
-    categories, addCategory, deleteCategory,
-    priorities, addPriority, deletePriority,
-    roles, addRole, deleteRole,
+    categories, addCategory, deleteCategory, updateCategory,
+    priorities, addPriority, deletePriority, updatePriority,
+    roles, addRole, deleteRole, updateRole,
     currentUser,
     systemLogo, updateSystemLogo
   } = useApp();
 
   const [activeSubTab, setActiveSubTab] = useState('categories');
   const [logoUrlInput, setLogoUrlInput] = useState('');
+
+  // Editing state variables
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editingPriority, setEditingPriority] = useState(null);
+  const [editingRole, setEditingRole] = useState(null);
+
+  // Category Edit Click & Cancel Handlers
+  const handleEditCategoryClick = (cat) => {
+    setEditingCategory(cat);
+    setCatLabel(cat.label);
+    setCatEmoji(cat.emoji);
+  };
+  const handleCancelCategoryEdit = () => {
+    setEditingCategory(null);
+    setCatLabel('');
+    setCatEmoji('☕');
+  };
+
+  // Priority Edit Click & Cancel Handlers
+  const handleEditPriorityClick = (pri) => {
+    setEditingPriority(pri);
+    setPriLabel(pri.label);
+    setPriColor(pri.color);
+  };
+  const handleCancelPriorityEdit = () => {
+    setEditingPriority(null);
+    setPriLabel('');
+    setPriColor('#10b981');
+  };
+
+  // Role Edit Click & Cancel Handlers
+  const handleEditRoleClick = (role) => {
+    setEditingRole(role);
+    setRoleLabel(role.label);
+    setRolePermission(role.permission);
+  };
+  const handleCancelRoleEdit = () => {
+    setEditingRole(null);
+    setRoleLabel('');
+    setRolePermission('staff');
+  };
 
   // Categories Form State
   const [catLabel, setCatLabel] = useState('');
@@ -52,7 +93,12 @@ export default function Settings() {
   const handleAddCategory = (e) => {
     e.preventDefault();
     if (!catLabel.trim()) return;
-    addCategory({ label: catLabel.trim(), emoji: catEmoji });
+    if (editingCategory) {
+      updateCategory(editingCategory.id, { label: catLabel.trim(), emoji: catEmoji });
+      setEditingCategory(null);
+    } else {
+      addCategory({ label: catLabel.trim(), emoji: catEmoji });
+    }
     setCatLabel('');
     setCatEmoji('☕');
   };
@@ -60,7 +106,12 @@ export default function Settings() {
   const handleAddPriority = (e) => {
     e.preventDefault();
     if (!priLabel.trim()) return;
-    addPriority({ label: priLabel.trim(), color: priColor });
+    if (editingPriority) {
+      updatePriority(editingPriority.id, { label: priLabel.trim(), color: priColor });
+      setEditingPriority(null);
+    } else {
+      addPriority({ label: priLabel.trim(), color: priColor });
+    }
     setPriLabel('');
     setPriColor('#10b981');
   };
@@ -68,7 +119,12 @@ export default function Settings() {
   const handleAddRole = (e) => {
     e.preventDefault();
     if (!roleLabel.trim()) return;
-    addRole({ label: roleLabel.trim(), permission: rolePermission });
+    if (editingRole) {
+      updateRole(editingRole.id, { label: roleLabel.trim(), permission: rolePermission });
+      setEditingRole(null);
+    } else {
+      addRole({ label: roleLabel.trim(), permission: rolePermission });
+    }
     setRoleLabel('');
     setRolePermission('staff');
   };
@@ -132,7 +188,8 @@ export default function Settings() {
           {/* Add Category Form */}
           <div className="glass-panel" style={{ padding: '24px' }}>
             <h4 style={{ fontSize: '15px', color: 'var(--gold-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Plus size={16} /> إضافة تصنيف مهام جديد
+              {editingCategory ? <Pencil size={16} /> : <Plus size={16} />}
+              {editingCategory ? 'تعديل تصنيف المهام' : 'إضافة تصنيف مهام جديد'}
             </h4>
 
             <form onSubmit={handleAddCategory} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -164,10 +221,17 @@ export default function Settings() {
                 </select>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
-                <Plus size={16} />
-                حفظ وإضافة التصنيف
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
+                  {editingCategory ? <Check size={16} /> : <Plus size={16} />}
+                  {editingCategory ? 'حفظ التغييرات' : 'حفظ وإضافة التصنيف'}
+                </button>
+                {editingCategory && (
+                  <button type="button" onClick={handleCancelCategoryEdit} className="btn btn-secondary" style={{ flex: 1 }}>
+                    إلغاء التعديل
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -177,22 +241,34 @@ export default function Settings() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '350px', overflowY: 'auto' }}>
               {categories.map(cat => (
-                <div key={cat.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div key={cat.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)', borderColor: editingCategory && editingCategory.id === cat.id ? 'var(--gold-primary)' : 'var(--glass-border)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '20px' }}>{cat.emoji}</span>
                     <span style={{ fontWeight: 600, fontSize: '13px' }}>{cat.label}</span>
                   </div>
 
-                  {categories.length > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button 
-                      onClick={() => deleteCategory(cat.id)}
+                      onClick={() => handleEditCategoryClick(cat)}
                       className="btn-danger-text"
-                      title="حذف هذا التصنيف"
-                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}
+                      title="تعديل هذا التصنيف"
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', color: 'var(--gold-primary)' }}
+                      type="button"
                     >
-                      <Trash2 size={16} />
+                      <Pencil size={15} />
                     </button>
-                  )}
+                    {categories.length > 1 && (
+                      <button 
+                        onClick={() => deleteCategory(cat.id)}
+                        className="btn-danger-text"
+                        title="حذف هذا التصنيف"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}
+                        type="button"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -206,7 +282,8 @@ export default function Settings() {
           {/* Add Priority Form */}
           <div className="glass-panel" style={{ padding: '24px' }}>
             <h4 style={{ fontSize: '15px', color: 'var(--gold-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Plus size={16} /> إضافة مستوى أهمية جديد
+              {editingPriority ? <Pencil size={16} /> : <Plus size={16} />}
+              {editingPriority ? 'تعديل مستوى الأهمية' : 'إضافة مستوى أهمية جديد'}
             </h4>
 
             <form onSubmit={handleAddPriority} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -238,10 +315,17 @@ export default function Settings() {
                 </select>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
-                <Plus size={16} />
-                حفظ وإضافة مستوى الأهمية
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
+                  {editingPriority ? <Check size={16} /> : <Plus size={16} />}
+                  {editingPriority ? 'حفظ التغييرات' : 'حفظ وإضافة مستوى الأهمية'}
+                </button>
+                {editingPriority && (
+                  <button type="button" onClick={handleCancelPriorityEdit} className="btn btn-secondary" style={{ flex: 1 }}>
+                    إلغاء التعديل
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -251,19 +335,31 @@ export default function Settings() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '350px', overflowY: 'auto' }}>
               {priorities.map(pri => (
-                <div key={pri.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)', borderRight: `3px solid ${pri.color}` }}>
+                <div key={pri.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)', borderRight: `3px solid ${pri.color}`, borderColor: editingPriority && editingPriority.id === pri.id ? 'var(--gold-primary)' : 'var(--glass-border)' }}>
                   <span style={{ fontWeight: 600, fontSize: '13px' }}>{pri.label}</span>
 
-                  {priorities.length > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button 
-                      onClick={() => deletePriority(pri.id)}
+                      onClick={() => handleEditPriorityClick(pri)}
                       className="btn-danger-text"
-                      title="حذف مستوى الأهمية"
-                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}
+                      title="تعديل مستوى الأهمية"
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', color: 'var(--gold-primary)' }}
+                      type="button"
                     >
-                      <Trash2 size={16} />
+                      <Pencil size={15} />
                     </button>
-                  )}
+                    {priorities.length > 1 && (
+                      <button 
+                        onClick={() => deletePriority(pri.id)}
+                        className="btn-danger-text"
+                        title="حذف مستوى الأهمية"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}
+                        type="button"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -277,7 +373,8 @@ export default function Settings() {
           {/* Add Role Form */}
           <div className="glass-panel" style={{ padding: '24px' }}>
             <h4 style={{ fontSize: '15px', color: 'var(--gold-primary)', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Plus size={16} /> إضافة دور وظيفي جديد
+              {editingRole ? <Pencil size={16} /> : <Plus size={16} />}
+              {editingRole ? 'تعديل الدور الوظيفي' : 'إضافة دور وظيفي جديد'}
             </h4>
 
             <form onSubmit={handleAddRole} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -307,10 +404,17 @@ export default function Settings() {
                 </select>
               </div>
 
-              <button type="submit" className="btn btn-primary" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
-                <Plus size={16} />
-                حفظ وإضافة الدور
-              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '6px' }}>
+                  {editingRole ? <Check size={16} /> : <Plus size={16} />}
+                  {editingRole ? 'حفظ التغييرات' : 'حفظ وإضافة الدور'}
+                </button>
+                {editingRole && (
+                  <button type="button" onClick={handleCancelRoleEdit} className="btn btn-secondary" style={{ flex: 1 }}>
+                    إلغاء التعديل
+                  </button>
+                )}
+              </div>
             </form>
           </div>
 
@@ -320,22 +424,34 @@ export default function Settings() {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '350px', overflowY: 'auto' }}>
               {roles.map(role => (
-                <div key={role.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)' }}>
+                <div key={role.id} className="glass-panel" style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.01)', borderColor: editingRole && editingRole.id === role.id ? 'var(--gold-primary)' : 'var(--glass-border)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                     <span style={{ fontWeight: 600, fontSize: '13px' }}>{role.label}</span>
                     <span style={{ fontSize: '10px', color: 'rgba(245,240,235,0.4)' }}>{getPermissionLabel(role.permission)}</span>
                   </div>
 
-                  {roles.length > 1 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <button 
-                      onClick={() => deleteRole(role.id)}
+                      onClick={() => handleEditRoleClick(role)}
                       className="btn-danger-text"
-                      title="حذف هذا الدور"
-                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}
+                      title="تعديل هذا الدور"
+                      style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px', color: 'var(--gold-primary)' }}
+                      type="button"
                     >
-                      <Trash2 size={16} />
+                      <Pencil size={15} />
                     </button>
-                  )}
+                    {roles.length > 1 && (
+                      <button 
+                        onClick={() => deleteRole(role.id)}
+                        className="btn-danger-text"
+                        title="حذف هذا الدور"
+                        style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px' }}
+                        type="button"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

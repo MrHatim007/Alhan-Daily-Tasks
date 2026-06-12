@@ -362,6 +362,45 @@ export const AppProvider = ({ children }) => {
     }
   }, [currentUser]);
 
+  // Auto-seed demo items once when logged in
+  useEffect(() => {
+    if (!currentUser || loading) return;
+
+    const seedDemos = async () => {
+      // 1. Categories
+      const hasDemoCat1 = categories.some(c => c.label.includes('تحضير القهوة والاسبريسو'));
+      if (!hasDemoCat1 && categories.length > 0) {
+        await addCategory({ label: 'تحضير القهوة والاسبريسو (تجربة)', emoji: '☕' });
+      }
+      const hasDemoCat2 = categories.some(c => c.label.includes('نظافة الصالة والطاولات'));
+      if (!hasDemoCat2 && categories.length > 0) {
+        await addCategory({ label: 'نظافة الصالة والطاولات (تجربة)', emoji: '🧹' });
+      }
+
+      // 2. Priorities
+      const hasDemoPri1 = priorities.some(p => p.label.includes('طارئ ولا يمكن'));
+      if (!hasDemoPri1 && priorities.length > 0) {
+        await addPriority({ label: 'طارئ ولا يمكن التأجيل (تجربة)', color: '#f43f5e' });
+      }
+      const hasDemoPri2 = priorities.some(p => p.label.includes('مهم خلال اليوم'));
+      if (!hasDemoPri2 && priorities.length > 0) {
+        await addPriority({ label: 'مهم خلال اليوم (تجربة)', color: '#f59e0b' });
+      }
+
+      // 3. Roles
+      const hasDemoRole1 = roles.some(r => r.label.includes('باريستا محترف'));
+      if (!hasDemoRole1 && roles.length > 0) {
+        await addRole({ label: 'باريستا محترف (تجربة)', permission: 'staff' });
+      }
+      const hasDemoRole2 = roles.some(r => r.label.includes('مشرف جودة الصالة'));
+      if (!hasDemoRole2 && roles.length > 0) {
+        await addRole({ label: 'مشرف جودة الصالة (تجربة)', permission: 'manager' });
+      }
+    };
+
+    seedDemos();
+  }, [currentUser, loading, categories.length, priorities.length, roles.length]);
+
   // Log activity helper
   const logActivity = async (action, details, userId, userName) => {
     const activeId = userId || (currentUser ? currentUser.id : 'system');
@@ -680,6 +719,36 @@ export const AppProvider = ({ children }) => {
     logActivity('update_logo', 'قام بتحديث شعار الكافيه مخصص للنظام.');
   };
 
+  // Update Category
+  const updateCategory = async (catId, updates) => {
+    if (isCloudActive) {
+      await updateDoc(doc(db, "categories", catId), updates);
+    } else {
+      setCategories(prev => prev.map(c => c.id === catId ? { ...c, ...updates } : c));
+    }
+    logActivity('update_category', `قام بتحديث بيانات التصنيف: "${updates.label}".`);
+  };
+
+  // Update Priority
+  const updatePriority = async (priId, updates) => {
+    if (isCloudActive) {
+      await updateDoc(doc(db, "priorities", priId), updates);
+    } else {
+      setPriorities(prev => prev.map(p => p.id === priId ? { ...p, ...updates } : p));
+    }
+    logActivity('update_priority', `قام بتحديث مستوى الأهمية: "${updates.label}".`);
+  };
+
+  // Update Role
+  const updateRole = async (roleId, updates) => {
+    if (isCloudActive) {
+      await updateDoc(doc(db, "roles", roleId), updates);
+    } else {
+      setRoles(prev => prev.map(r => r.id === roleId ? { ...r, ...updates } : r));
+    }
+    logActivity('update_role', `قام بتحديث الدور الوظيفي: "${updates.label}".`);
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -696,10 +765,13 @@ export const AppProvider = ({ children }) => {
         updateSystemLogo,
         addCategory,
         deleteCategory,
+        updateCategory,
         addPriority,
         deletePriority,
+        updatePriority,
         addRole,
         deleteRole,
+        updateRole,
         loginUser,
         logoutUser,
         addTask,
